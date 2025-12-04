@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AVランキング管理 — AV Quantification</title>
+<style>
+  :root{--bg:#f7f7f9;--card:#fff;--accent:#0b66ff;--muted:#666;--radius:12px;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;color:#111;}
+  html,body{height:100%;margin:0;background:var(--bg);} .wrap{max-width:920px;margin:16px auto;padding:16px;box-sizing:border-box;}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:12px;} header h1{font-size:18px;margin:0;} .card{background:var(--card);border-radius:var(--radius);padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px;}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;} input[type="text"],input[type="number"],select{width:100%;padding:10px;font-size:15px;border-radius:8px;border:1px solid #e3e3e6;box-sizing:border-box;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;} .col{flex:1;min-width:150px;} .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:white;text-decoration:none;font-size:14px;border:none;cursor:pointer;}
+  .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);} .btn.warn{background:#e5533d;color:white;border:none;}
+  table{width:100%;border-collapse:collapse;font-size:14px;} th,td{padding:8px;text-align:left;border-bottom:1px solid #efeff2;} th{background:#fbfbfc;font-weight:600;}
+  .muted{color:var(--muted);font-size:13px;} .small{font-size:13px;} .flex-between{display:flex;justify-content:space-between;align-items:center;}
+  .importarea{width:100%;min-height:54px;padding:8px;border:1px dashed var(--muted);border-radius:8px;box-sizing:border-box;margin-bottom:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+  .derived{display:flex;gap:12px;flex-wrap:wrap;} .derived .dcard{background:#fbfbfc;padding:8px;border-radius:8px;min-width:160px;}
+  .error{color:#e5533d;font-size:13px;margin-top:6px;} @media (max-width:720px){ .row{flex-direction:column;} .derived .dcard{min-width:100%;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>AVランキング管理 — AV Quantification</h1></header>
+  <div class="card" id="formCard">
+    <label for="actorName">女優名</label><input type="text" id="actorName" placeholder="女優名を入力">
+    <div style="height:8px"></div>
+    <div class="row">
+      <div class="col"><label for="scoreFace">顔（0〜100）</label><input type="number" id="scoreFace" min="0" max="100" value="75"></div>
+      <div class="col"><label for="scoreBody">身体（0〜100）</label><input type="number" id="scoreBody" min="0" max="100" value="75"></div>
+      <div class="col"><label for="scoreActing">演技（0〜100）</label><input type="number" id="scoreActing" min="0" max="100" value="70"></div>
+      <div class="col"><label for="scoreEro">抜け度（0〜100）</label><input type="number" id="scoreEro" min="0" max="100" value="80"></div>
+      <div class="col"><label for="scoreWorks">代表作点数（0〜100）</label><input type="number" id="scoreWorks" min="0" max="100" value="60"></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="derived">
+      <div class="dcard"><div class="small muted">視界制圧力（自動計算）</div><div id="visValue" style="font-weight:700;font-size:18px">--</div></div>
+      <div class="dcard"><div class="small muted">心理的引力（自動計算）</div><div id="psyValue" style="font-weight:700;font-size:18px">--</div></div>
+      <div class="dcard"><div class="small muted">総合スコア（ランキング）</div><div id="totalValue" style="font-weight:700;font-size:18px">--</div></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="flex-between">
+      <div><button class="btn" id="saveBtn">登録</button><button class="btn ghost" id="clearBtn">クリア</button></div>
+      <div class="small muted">保存はブラウザ(localStorage)に行います</div>
+    </div>
+    <div id="formError" class="error" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="align-items:center;">
+      <div class="col"><div class="importarea" id="importArea">CSVをここにドラッグ＆ドロップ、または下の「インポート」ボタンで読み込み</div></div>
+      <div style="min-width:200px;display:flex;gap:8px;">
+        <input type="file" id="csvFile" accept=".csv" style="display:none">
+        <button class="btn ghost" id="importBtn">インポート</button>
+        <button class="btn" id="exportBtn">エクスポート (CSV)</button>
+        <button class="btn ghost" id="clearAllBtn">全データ削除</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card flex-between">
+    <div style="display:flex;gap:8px;">
+      <label class="small muted" for="sortSelect" style="align-self:center;margin:0 6px 0 0;">ソート:</label>
+      <select id="sortSelect">
+        <option value="rank_desc">総合スコア（高→低）</option>
+        <option value="rank_asc">総合スコア（低→高）</option>
+        <option value="name_asc">女優名（昇順）</option>
+        <option value="name_desc">女優名（降順）</option>
+        <option value="vis_desc">視界制圧力（高→低）</option>
+      </select>
+      <button class="btn ghost" id="simulateBtn">ランキング変動をシミュレート</button>
+    </div>
+    <div class="small muted">合計 <span id="countBadge">0</span> 件</div>
+  </div>
+
+  <div class="card">
+    <table id="dataTable">
+      <thead>
+        <tr><th>順位</th><th>女優名</th><th>顔</th><th>身体</th><th>演技</th><th>抜け度</th><th>代表作</th><th>視界制圧力</th><th>心理的引力</th><th>総合スコア</th><th>操作</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,Number(v)||0));
+const fmt=v=>Math.round(v*100)/100;
+const STORAGE_KEY='av_quant_data_v1';
+
+const actorName=document.getElementById('actorName');
+const scoreFace=document.getElementById('scoreFace');
+const scoreBody=document.getElementById('scoreBody');
+const scoreActing=document.getElementById('scoreActing');
+const scoreEro=document.getElementById('scoreEro');
+const scoreWorks=document.getElementById('scoreWorks');
+const visValue=document.getElementById('visValue');
+const psyValue=document.getElementById('psyValue');
+const totalValue=document.getElementById('totalValue');
+const saveBtn=document.getElementById('saveBtn');
+const clearBtn=document.getElementById('clearBtn');
+const formError=document.getElementById('formError');
+const dataTable=document.getElementById('dataTable').querySelector('tbody');
+const countBadge=document.getElementById('countBadge');
+const importArea=document.getElementById('importArea');
+const importBtn=document.getElementById('importBtn');
+const csvFile=document.getElementById('csvFile');
+const exportBtn=document.getElementById('exportBtn');
+const clearAllBtn=document.getElementById('clearAllBtn');
+const sortSelect=document.getElementById('sortSelect');
+const simulateBtn=document.getElementById('simulateBtn');
+
+let dataset=[];
+
+function calcVis(face,body,acting,ero){return clamp(face*0.4+body*0.3+acting*0.2+ero*0.1,0,100);}
+function calcPsy(face,body){return clamp(Math.sqrt(face*body)*1.1,0,100);}
+function calcTotal(vis,psy,works){return clamp(vis*0.6+psy*0.3+works*0.1,0,100);}
+
+function validateInputs(){if(!actorName.value.trim()) return '女優名を入力してください。'; return null;}
+
+function updateDerived(){
+  const f=clamp(scoreFace.value,0,100);
+  const b=clamp(scoreBody.value,0,100);
+  const a=clamp(scoreActing.value,0,100);
+  const e=clamp(scoreEro.value,0,100);
+  const w=clamp(scoreWorks.value,0,100);
+  const vis=calcVis(f,b,a,e);
+  const psy=calcPsy(f,b);
+  const total=calcTotal(vis,psy,w);
+  visValue.textContent=fmt(vis); psyValue.textContent=fmt(psy); totalValue.textContent=fmt(total);
+}
+
+function saveDataset(){localStorage.setItem(STORAGE_KEY,JSON.stringify(dataset));}
+function loadDataset(){const raw=localStorage.getItem(STORAGE_KEY); dataset= raw? JSON.parse(raw): [];}
+
+function renderTable(){
+  const sortMode=sortSelect.value;
+  let list=[...dataset];
+  switch(sortMode){
+    case 'rank_desc': list.sort((a,b)=>b.total-a.total); break;
+    case 'rank_asc': list.sort((a,b)=>a.total-b.total); break;
+    case 'name_asc': list.sort((a,b)=>a.name.localeCompare(b.name)); break;
+    case 'name_desc': list.sort((a,b)=>b.name.localeCompare(a.name)); break;
+    case 'vis_desc': list.sort((a,b)=>b.vis-a.vis); break;
+    default: list.sort((a,b)=>b.total-a.total);
+  }
+  dataTable.innerHTML='';
+  list.forEach((item,idx)=>{
+    const tr=document.createElement('tr');
+    const td=(t)=>{const e=document.createElement('td');e.textContent=t;return e;};
+    tr.appendChild(td(idx+1));
+    tr.appendChild(td(item.name));
+    tr.appendChild(td(item.face));
+    tr.appendChild(td(item.body));
+    tr.appendChild(td(item.acting));
+    tr.appendChild(td(item.ero));
+    tr.appendChild(td(item.works));
+    tr.appendChild(td(fmt(item.vis)));
+    tr.appendChild(td(fmt(item.psy)));
+    tr.appendChild(td(fmt(item.total)));
+    const ops=document.createElement('td');
+    const edit=document.createElement('button'); edit.className='btn ghost'; edit.textContent='編集'; edit.onclick=()=>beginEdit(item.id);
+    const del=document.createElement('button'); del.className='btn warn'; del.textContent='削除'; del.style.marginLeft='6px';
+    del.onclick=()=>{ if(confirm(`「${item.name}」を削除しますか？`)){ dataset=dataset.filter(d=>d.id!==item.id); saveDataset(); renderTable(); } };
+    ops.appendChild(edit); ops.appendChild(del);
+    tr.appendChild(ops);
+    dataTable.appendChild(tr);
+  });
+  countBadge.textContent=dataset.length;
+}
+
+let editingId=null;
+function beginEdit(id){
+  const it=dataset.find(d=>d.id===id); if(!it) return;
+  editingId=id; actorName.value=it.name; scoreFace.value=it.face; scoreBody.value=it.body; scoreActing.value=it.acting; scoreEro.value=it.ero; scoreWorks.value=it.works;
+  updateDerived(); saveBtn.textContent='更新'; window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetForm(){editingId=null; actorName.value=''; scoreFace.value=75; scoreBody.value=75; scoreActing.value=70; scoreEro.value=80; scoreWorks.value=60; updateDerived(); saveBtn.textContent='登録'; formError.style.display='none';}
+
+function onSave(){
+  formError.style.display='none'; const err=validateInputs(); if(err){ formError.textContent=err; formError.style.display='block'; return; }
+  const name=actorName.value.trim(); const f=clamp(scoreFace.value,0,100); const b=clamp(scoreBody.value,0,100); const a=clamp(scoreActing.value,0,100); const e=clamp(scoreEro.value,0,100); const w=clamp(scoreWorks.value,0,100);
+  const vis=calcVis(f,b,a,e); const psy=calcPsy(f,b); const total=calcTotal(vis,psy,w);
+  if(editingId){
+    const i=dataset.findIndex(d=>d.id===editingId); if(i!==-1){ dataset[i]={...dataset[i], name, face:f, body:b, acting:a, ero:e, works:w, vis, psy, total, updatedAt:(new Date()).toISOString()}; }
+    editingId=null; saveBtn.textContent='登録';
+  } else {
+    const id=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    dataset.push({id, name, face:f, body:b, acting:a, ero:e, works:w, vis, psy, total, createdAt:(new Date()).toISOString()});
+  }
+  saveDataset(); renderTable(); resetForm();
+}
+
+function exportCSV(){
+  if(dataset.length===0){ alert('エクスポートするデータがありません。'); return; }
+  const header=['id','name','face','body','acting','ero','works','vis','psy','total','createdAt'];
+  const lines=[header.join(',')];
+  dataset.forEach(d=>{
+    const row=header.map(h=>{
+      const v=d[h]??''; if(typeof v==='string'&&(v.includes(',')||v.includes('
+')||v.includes('"'))){ return `"${v.replace(/"/g,'""')}"`; } return v;
+    });
+    lines.push(row.join(','));
+  });
+  const csv=lines.join('
+'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='av_quant_dataset.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function parseCSV(text){
+  const lines=text.split(/?
+/).filter(l=>l.trim()!==''); if(lines.length<2) return {error:'CSVにデータが含まれていません。'};
+  const header=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'')); const rows=lines.slice(1).map(line=>{
+    const parts=[]; let cur=''; let inQuote=false;
+    for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(inQuote && line[i+1]==='"'){ cur+='"'; i++; continue; } inQuote=!inQuote; continue; } if(ch===',' && !inQuote){ parts.push(cur); cur=''; continue; } cur+=ch; }
+    parts.push(cur); const obj={}; for(let i=0;i<header.length;i++){ obj[header[i]]=(parts[i]??'').trim(); } return obj;
+  });
+  return {header, rows};
+}
+
+function importCSVText(text){
+  const res=parseCSV(text); if(res.error){ alert(res.error); return; }
+  let count=0; res.rows.forEach(r=>{ if(!r.name) return; const f=clamp(Number(r.face)||0,0,100); const b=clamp(Number(r.body)||0,0,100); const a=clamp(Number(r.acting)||0,0,100); const e=clamp(Number(r.ero)||0,0,100); const w=clamp(Number(r.works)||0,0,100); const vis=calcVis(f,b,a,e); const psy=calcPsy(f,b); const total=calcTotal(vis,psy,w); const id=r.id||(Date.now().toString(36)+Math.random().toString(36).slice(2,8)); dataset.push({id,name:r.name,face:f,body:b,acting:a,ero:e,works:w,vis,psy,total,createdAt:r.createdAt|| (new Date()).toISOString()}); count++; });
+  saveDataset(); renderTable(); alert(count+' 件をインポートしました。');
+}
+
+function simulateFluctuation(){
+  if(dataset.length===0){ alert('データがありません。'); return; }
+  const clone=dataset.map(d=>({...d})); clone.forEach(d=>{ const factor=1+(Math.random()*0.05*(Math.random()<0.5?-1:1)); d.total=clamp(d.total*factor,0,100); });
+  const list=clone.sort((a,b)=>b.total-a.total);
+  dataTable.innerHTML=''; list.forEach((item,idx)=>{ const tr=document.createElement('tr'); const td=(t)=>{const e=document.createElement('td');e.textContent=t;return e;}; tr.appendChild(td(idx+1)); tr.appendChild(td(item.name)); tr.appendChild(td(item.face)); tr.appendChild(td(item.body)); tr.appendChild(td(item.acting)); tr.appendChild(td(item.ero)); tr.appendChild(td(item.works)); tr.appendChild(td(fmt(item.vis))); tr.appendChild(td(fmt(item.psy))); tr.appendChild(td(fmt(item.total))); const ops=document.createElement('td'); const revert=document.createElement('button'); revert.className='btn ghost'; revert.textContent='戻す'; revert.onclick=()=>renderTable(); ops.appendChild(revert); tr.appendChild(ops); dataTable.appendChild(tr); });
+}
+
+scoreFace.addEventListener('input',updateDerived); scoreBody.addEventListener('input',updateDerived); scoreActing.addEventListener('input',updateDerived); scoreEro.addEventListener('input',updateDerived); scoreWorks.addEventListener('input',updateDerived);
+saveBtn.addEventListener('click',onSave); clearBtn.addEventListener('click',resetForm); sortSelect.addEventListener('change',renderTable); simulateBtn.addEventListener('click',simulateFluctuation);
+exportBtn.addEventListener('click',exportCSV); clearAllBtn.addEventListener('click',()=>{ if(!confirm('全データを完全に削除します。よろしいですか？')) return; dataset=[]; saveDataset(); renderTable(); });
+importBtn.addEventListener('click',()=>csvFile.click()); csvFile.addEventListener('change',(ev)=>{ const f=ev.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=()=>importCSVText(reader.result); reader.readAsText(f,'utf-8'); csvFile.value=''; });
+importArea.addEventListener('dragover',(e)=>{ e.preventDefault(); importArea.style.borderColor='#0b66ff'; }); importArea.addEventListener('dragleave',(e)=>{ e.preventDefault(); importArea.style.borderColor=''; }); importArea.addEventListener('drop',(e)=>{ e.preventDefault(); importArea.style.borderColor=''; const file=e.dataTransfer.files[0]; if(!file) return; const reader=new FileReader(); reader.onload=()=>importCSVText(reader.result); reader.readAsText(file,'utf-8'); });
+
+function init(){ loadDataset(); renderTable(); resetForm(); updateDerived(); } init();
+</script>
+</body>
+</html>
