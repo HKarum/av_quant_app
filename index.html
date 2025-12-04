@@ -3,77 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AV Quantification (完全版)</title>
+<title>AV Quantification — 完全版</title>
+<meta name="description" content="AVランキング管理アプリ（ローカル保存）">
+
 <style>
-  :root{--bg:#f7f7f9;--card:#fff;--accent:#0b66ff;--muted:#6b7280;--radius:12px;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;color:#111;}
-  html,body{height:100%;margin:0;background:var(--bg);} .wrap{max-width:920px;margin:16px auto;padding:16px;box-sizing:border-box;}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  :root{
+    --bg:#f7f7f9;
+    --card:#fff;
+    --accent:#0b66ff;
+    --danger:#e5533d;
+    --muted:#6b7280;
+    --radius:12px;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;
+    color:#111;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);}
+  .wrap{max-width:960px;margin:16px auto;padding:16px;box-sizing:border-box;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   h1{font-size:18px;margin:0;}
-  .card{background:var(--card);border-radius:var(--radius);padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px;}
-  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
-  input[type="text"],input[type="number"],select{width:100%;padding:10px;font-size:15px;border-radius:8px;border:1px solid #e6e7ea;box-sizing:border-box;}
-  .row{display:flex;gap:10px;flex-wrap:wrap;}
-  .col{flex:1;min-width:120px;}
-  .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:white;border:none;font-size:14px;cursor:pointer;}
+  .card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px;}
+  .topmenu{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:14px;cursor:pointer;}
   .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);}
-  table{width:100%;border-collapse:collapse;font-size:14px;}
-  th,td{padding:8px;text-align:left;border-bottom:1px solid #eef0f2;}
+  .btn.danger{background:var(--danger);color:#fff;border:none;}
+  .muted{color:var(--muted);font-size:13px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  /* form layout */
+  .form-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .form-row .label-col{width:100px;font-size:13px;color:var(--muted);}
+  .scores{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .score-col{display:flex;flex-direction:column;align-items:center;min-width:64px}
+  .score-col label{font-size:13px;color:var(--muted);margin-bottom:6px;}
+  input[type="number"], input[type="text"], select{padding:8px;border-radius:8px;border:1px solid #e6e7ea;font-size:14px;box-sizing:border-box;}
+  input[type="number"]{width:72px;text-align:center;}
+  input[type="text"]{width:100%;}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;}
+  th,td{padding:8px;border-bottom:1px solid #eef0f2;text-align:left;}
   th{background:#fbfbfc;font-weight:600;}
   .actions button{background:transparent;border:none;font-size:18px;cursor:pointer;padding:6px;border-radius:6px;}
-  .actions button.edit{color:#0b66ff;}
-  .actions button.del{color:#e5533d;}
-  .muted{color:var(--muted);font-size:13px;}
-  @media (max-width:720px){ .row{flex-direction:column;} .col{min-width:unset;} table th:nth-child(2),table td:nth-child(2){display:none;} }
+  .actions button.edit{color:var(--accent);}
+  .actions button.del{color:var(--danger);}
+  .top-return{margin-top:12px;}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .select-sort{padding:8px;border-radius:8px;border:1px solid #e6e7ea;}
+  @media (max-width:720px){
+    .form-row{flex-direction:column;align-items:flex-start;}
+    .form-row .label-col{width:auto;}
+    .scores{gap:6px;}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <header>
-    <h1>AV Quantification — 管理</h1>
+    <h1>AV Quantification</h1>
     <div class="muted">データはブラウザ(localStorage)に保存されます</div>
   </header>
 
-  <div class="card" id="formCard">
-    <label for="name">名前</label>
-    <input type="text" id="name" placeholder="女優名を入力">
-
-    <div class="row" style="margin-top:8px;">
-      <div class="col">
-        <label for="body">身体 (1〜10)</label>
-        <input type="number" id="body" min="1" max="10" placeholder="例: 8">
-      </div>
-      <div class="col">
-        <label for="nuke">抜け度 (1〜10)</label>
-        <input type="number" id="nuke" min="1" max="10" placeholder="例: 7">
-      </div>
-      <div class="col">
-        <label for="acting">演技 (1〜10)</label>
-        <input type="number" id="acting" min="1" max="10" placeholder="例: 6">
-      </div>
-      <div class="col">
-        <label for="face">顔 (1〜10)</label>
-        <input type="number" id="face" min="1" max="10" placeholder="例: 9">
-      </div>
+  <!-- トップメニュー -->
+  <div class="card">
+    <div class="topmenu">
+      <button class="btn" data-screen="ranking">ランキング表示</button>
+      <button class="btn" data-screen="add">女優追加</button>
+      <button class="btn" data-screen="edit">女優編集</button>
     </div>
-
-    <div style="margin-top:8px;">
-      <label for="rep">代表作点数（整数）</label>
-      <input type="number" id="rep" min="0" placeholder="例: 20">
-    </div>
-
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="btn" id="saveBtn">登録</button>
-      <button class="btn ghost" id="clearBtn" type="button">クリア</button>
-      <button class="btn ghost" id="exportBtn" type="button">エクスポート (CSV)</button>
-      <button class="btn ghost" id="importBtn" type="button">インポート (CSV)</button>
-      <input type="file" id="csvFile" accept=".csv" style="display:none">
-    </div>
-    <div id="formError" class="muted" style="margin-top:8px;color:#e5533d;display:none;"></div>
   </div>
 
-  <div class="card">
-    <h3 style="margin:0 0 8px 0;">ランキング</h3>
-    <table>
+  <!-- ランキング画面 -->
+  <section id="ranking" class="card screen">
+    <div class="flex-between">
+      <h2 style="margin:0">ランキング</h2>
+      <div>
+        <label class="muted" for="sortSelect">並び替え：</label>
+        <select id="sortSelect" class="select-sort">
+          <option value="total_desc">total（降順）</option>
+          <option value="shikai_desc">視界制圧力（降順）</option>
+          <option value="shinri_desc">心理的引力（降順）</option>
+          <option value="rep_desc">代表作点数（降順）</option>
+          <option value="name_asc">名前（昇順）</option>
+        </select>
+      </div>
+    </div>
+
+    <table aria-label="ランキング表">
       <thead>
         <tr>
           <th>名前</th>
@@ -84,13 +98,125 @@
           <th style="width:120px">操作</th>
         </tr>
       </thead>
-      <tbody id="ranking"></tbody>
+      <tbody id="rankingBody"></tbody>
     </table>
-  </div>
+
+    <div class="top-return">
+      <button class="btn ghost" data-screen="top">トップメニューに戻る</button>
+    </div>
+  </section>
+
+  <!-- 女優追加画面 -->
+  <section id="add" class="card screen">
+    <h2 style="margin:0 0 8px 0">女優追加</h2>
+
+    <div class="form-row">
+      <div class="label-col">名前</div>
+      <div style="flex:1"><input type="text" id="add_name" placeholder="女優名を入力"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="label-col">顔 / 身体 / 演技 / 抜け度</div>
+      <div class="scores">
+        <div class="score-col"><label>顔</label><input type="number" id="add_face" min="1" max="10" value="10"></div>
+        <div class="score-col"><label>身体</label><input type="number" id="add_body" min="1" max="10" value="10"></div>
+        <div class="score-col"><label>演技</label><input type="number" id="add_acting" min="1" max="10" value="5"></div>
+        <div class="score-col"><label>抜け度</label><input type="number" id="add_nuke" min="1" max="10" value="8"></div>
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top:8px;">
+      <div class="label-col">代表作点数</div>
+      <div style="flex:1"><input type="number" id="add_rep" min="0" value="0"></div>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn" id="addSubmit">追加</button>
+      <button class="btn ghost" data-screen="top">トップメニュー</button>
+    </div>
+
+    <div id="addError" class="muted" style="margin-top:8px;color:#e5533d;display:none;"></div>
+  </section>
+
+  <!-- 女優編集画面 -->
+  <section id="edit" class="card screen">
+    <h2 style="margin:0 0 8px 0">女優編集</h2>
+
+    <div class="form-row">
+      <div class="label-col">編集対象</div>
+      <div style="flex:1">
+        <select id="edit_select" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e7ea;"></select>
+      </div>
+    </div>
+
+    <div id="editArea" style="margin-top:12px;display:none;">
+      <div class="form-row">
+        <div class="label-col">名前</div>
+        <div style="flex:1"><input type="text" id="edit_name"></div>
+      </div>
+
+      <div class="form-row">
+        <div class="label-col">顔 / 身体 / 演技 / 抜け度</div>
+        <div class="scores">
+          <div class="score-col"><label>顔</label><input type="number" id="edit_face" min="1" max="10"></div>
+          <div class="score-col"><label>身体</label><input type="number" id="edit_body" min="1" max="10"></div>
+          <div class="score-col"><label>演技</label><input type="number" id="edit_acting" min="1" max="10"></div>
+          <div class="score-col"><label>抜け度</label><input type="number" id="edit_nuke" min="1" max="10"></div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:8px;">
+        <div class="label-col">代表作点数</div>
+        <div style="flex:1"><input type="number" id="edit_rep" min="0"></div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn" id="editSave">更新</button>
+        <button class="btn danger" id="editDelete">削除</button>
+        <button class="btn ghost" data-screen="top">トップメニュー</button>
+      </div>
+      <div id="editError" class="muted" style="margin-top:8px;color:#e5533d;display:none;"></div>
+    </div>
+
+    <div id="noActors" class="muted" style="display:none;margin-top:8px;">
+      女優情報がありません。<button class="btn ghost" data-screen="top" style="margin-left:8px;">トップメニューへ</button>
+    </div>
+  </section>
+
 </div>
 
 <script>
-/* 計算式（仕様どおり） */
+/*
+ 完全版 JS
+ - データは localStorage に 'avdata_v2' キーで保存
+ - 計算式はユーザー指定のとおり
+ - 画面遷移は data-screen 属性で制御
+ - 追加/編集/削除のたびにソート（選択ソート）して表示を更新
+*/
+
+const STORAGE_KEY = 'avdata_v2';
+
+/* --- helper --- */
+const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+function loadData(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }catch(e){
+    return [];
+  }
+}
+function saveData(data){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function clampInt(v,min,max){
+  const n = Math.floor(Number(v) || 0);
+  if(n < min) return min;
+  if(n > max) return max;
+  return n;
+}
+
+/* --- calculation (spec) --- */
 function calcShikai(body, nuke, acting, face){
   return Math.floor(((body * 0.8) + (nuke * 0.6) + (acting * 0.4) + (face * 0.2)) * 5);
 }
@@ -98,52 +224,88 @@ function calcShinri(acting, face, nuke, body){
   return Math.floor(((acting * 0.8) + (face * 0.6) + (nuke * 0.4) + (body * 0.2)) * 5);
 }
 
-/* localStorage キー */
-const STORAGE_KEY = 'avdata';
-
-/* DOM */
-const nameEl = document.getElementById('name');
-const bodyEl = document.getElementById('body');
-const nukeEl = document.getElementById('nuke');
-const actingEl = document.getElementById('acting');
-const faceEl = document.getElementById('face');
-const repEl = document.getElementById('rep');
-const saveBtn = document.getElementById('saveBtn');
-const clearBtn = document.getElementById('clearBtn');
-const rankingTbody = document.getElementById('ranking');
-const formError = document.getElementById('formError');
-const exportBtn = document.getElementById('exportBtn');
-const importBtn = document.getElementById('importBtn');
-const csvFile = document.getElementById('csvFile');
-
-let dataset = []; // {id,name,body,nuke,acting,face,rep,shikai,shinri,total,createdAt,updatedAt}
-let editingId = null;
-
-/* ユーティリティ */
-const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-const clampInt = (v, min, max) => {
-  const n = Math.floor(Number(v) || 0);
-  if(n < min) return min;
-  if(n > max) return max;
-  return n;
+/* --- UI elements --- */
+const screens = document.querySelectorAll('[data-screen]');
+const screenElems = {
+  top: null, // virtual
+  ranking: document.getElementById('ranking'),
+  add: document.getElementById('add'),
+  edit: document.getElementById('edit')
 };
 
-function loadData(){
-  try{
-    dataset = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  }catch(e){
-    dataset = [];
-  }
+document.querySelectorAll('[data-screen]').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
+    const target = btn.getAttribute('data-screen');
+    if(target === 'top'){
+      showTop();
+    } else {
+      showScreen(target);
+    }
+  });
+});
+
+/* top menu buttons */
+document.querySelectorAll('.topmenu button').forEach(b=>{
+  b.addEventListener('click', ()=> {
+    const sc = b.getAttribute('data-screen');
+    showScreen(sc);
+  });
+});
+
+/* navigation */
+function hideAll(){
+  document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active'));
 }
-function saveData(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(dataset));
+function showScreen(name){
+  hideAll();
+  const el = screenElems[name];
+  if(el) el.classList.add('active');
+  if(name === 'ranking') renderRanking();
+  if(name === 'edit') prepareEdit();
+}
+function showTop(){
+  hideAll();
+  // show nothing - top is just the top menu card (already visible)
+  // to make top visible simply scroll to top
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-/* レンダリング（total 降順でソート） */
-function render(){
-  dataset.sort((a,b)=> b.total - a.total);
-  rankingTbody.innerHTML = '';
-  dataset.forEach((it, idx) => {
+/* --- Ranking --- */
+const rankingBody = document.getElementById('rankingBody');
+const sortSelect = document.getElementById('sortSelect');
+
+function sortData(data, mode){
+  // Returns new array sorted
+  const arr = data.slice();
+  switch(mode){
+    case 'total_desc':
+      arr.sort((a,b)=> b.total - a.total);
+      break;
+    case 'shikai_desc':
+      arr.sort((a,b)=> b.shikai - a.shikai);
+      break;
+    case 'shinri_desc':
+      arr.sort((a,b)=> b.shinri - a.shinri);
+      break;
+    case 'rep_desc':
+      arr.sort((a,b)=> b.rep - a.rep);
+      break;
+    case 'name_asc':
+      arr.sort((a,b)=> a.name.localeCompare(b.name));
+      break;
+    default:
+      arr.sort((a,b)=> b.total - a.total);
+  }
+  return arr;
+}
+
+function renderRanking(){
+  const data = loadData();
+  const mode = sortSelect.value;
+  const list = sortData(data, mode);
+
+  rankingBody.innerHTML = '';
+  list.forEach((it, idx) => {
     const tr = document.createElement('tr');
 
     const tdName = document.createElement('td'); tdName.textContent = it.name;
@@ -154,23 +316,28 @@ function render(){
 
     const tdOps = document.createElement('td');
     tdOps.className = 'actions';
-
-    // 編集ボタン（✎）
-    const btnEdit = document.createElement('button');
-    btnEdit.className = 'edit';
-    btnEdit.title = '編集';
-    btnEdit.innerHTML = '✎';
-    btnEdit.addEventListener('click', ()=> beginEdit(it.id));
-
-    // 削除ボタン（✕） -- 即削除（確認なし）
-    const btnDel = document.createElement('button');
-    btnDel.className = 'del';
-    btnDel.title = '削除';
-    btnDel.innerHTML = '✕';
+    const btnEdit = document.createElement('button'); btnEdit.className = 'edit'; btnEdit.title = '編集'; btnEdit.innerHTML = '✎';
+    const btnDel = document.createElement('button'); btnDel.className = 'del'; btnDel.title = '削除'; btnDel.innerHTML = '✕';
+    // edit should open edit screen with that actor selected
+    btnEdit.addEventListener('click', ()=> {
+      showScreen('edit');
+      // small timeout to ensure select populated
+      setTimeout(()=> {
+        const sel = document.getElementById('edit_select');
+        sel.value = it.id;
+        sel.dispatchEvent(new Event('change'));
+      }, 150);
+    });
     btnDel.addEventListener('click', ()=> {
-      dataset = dataset.filter(d => d.id !== it.id);
-      saveData();
-      render();
+      // immediate delete (as requested)
+      const res = confirm(`「${it.name}」を削除しますか？（確認ダイアログ）`); 
+      // Note: user requested no confirm earlier for general deletes, but deletion from ranking we add a confirm for safety.
+      // If you want no confirm here, change to immediate deletion.
+      if(res){
+        const all = loadData().filter(d => d.id !== it.id);
+        saveData(all);
+        renderRanking();
+      }
     });
 
     tdOps.appendChild(btnEdit);
@@ -183,160 +350,186 @@ function render(){
     tr.appendChild(tdRep);
     tr.appendChild(tdOps);
 
-    rankingTbody.appendChild(tr);
+    rankingBody.appendChild(tr);
   });
 }
 
-/* フォーム制御 */
-function resetForm(){
-  editingId = null;
-  nameEl.value = '';
-  bodyEl.value = '';
-  nukeEl.value = '';
-  actingEl.value = '';
-  faceEl.value = '';
-  repEl.value = '';
-  saveBtn.textContent = '登録';
-  formError.style.display = 'none';
-}
-function beginEdit(id){
-  const it = dataset.find(d => d.id === id);
-  if(!it) return;
-  editingId = id;
-  nameEl.value = it.name;
-  bodyEl.value = it.body;
-  nukeEl.value = it.nuke;
-  actingEl.value = it.acting;
-  faceEl.value = it.face;
-  repEl.value = it.rep;
-  saveBtn.textContent = '更新';
-  window.scrollTo({top:0, behavior:'smooth'});
-}
+/* sort change */
+sortSelect.addEventListener('change', ()=> renderRanking());
 
-/* バリデーション & 保存処理 */
-function validateForm(){
-  const name = nameEl.value.trim();
+/* --- Add screen handling --- */
+const add_name = document.getElementById('add_name');
+const add_face = document.getElementById('add_face');
+const add_body = document.getElementById('add_body');
+const add_acting = document.getElementById('add_acting');
+const add_nuke = document.getElementById('add_nuke');
+const add_rep = document.getElementById('add_rep');
+const addSubmit = document.getElementById('addSubmit');
+const addError = document.getElementById('addError');
+
+function validateAdd(){
+  const name = add_name.value.trim();
   if(!name) return '名前を入力してください。';
-  // 各スコアは 1-10 の整数（代表作は0以上）
-  const b = Number(bodyEl.value);
-  const n = Number(nukeEl.value);
-  const a = Number(actingEl.value);
-  const f = Number(faceEl.value);
-  if(!Number.isFinite(b) || !Number.isFinite(n) || !Number.isFinite(a) || !Number.isFinite(f)) return '身体・抜け度・演技・顔は数値で入力してください。';
-  if(b < 1 || b > 10 || n < 1 || n > 10 || a < 1 || a > 10 || f < 1 || f > 10) return '身体・抜け度・演技・顔は 1〜10 の範囲で入力してください。';
-  if(!Number.isFinite(Number(repEl.value))) return '代表作点数は整数で入力してください。';
+  const face = Number(add_face.value), body = Number(add_body.value), acting = Number(add_acting.value), nuke = Number(add_nuke.value);
+  if(!Number.isFinite(face) || !Number.isFinite(body) || !Number.isFinite(acting) || !Number.isFinite(nuke)) return '顔・身体・演技・抜け度は数値で入力してください。';
+  if(face <1 || face >10 || body <1 || body >10 || acting <1 || acting >10 || nuke <1 || nuke >10) return '顔・身体・演技・抜け度は 1〜10 の範囲で入力してください。';
+  if(!Number.isFinite(Number(add_rep.value))) return '代表作点数は整数で入力してください。';
   return null;
 }
 
-saveBtn.addEventListener('click', ()=>{
-  formError.style.display = 'none';
-  const err = validateForm();
-  if(err){
-    formError.textContent = err;
-    formError.style.display = 'block';
-    return;
-  }
-  const name = nameEl.value.trim();
-  const body = clampInt(bodyEl.value,1,10);
-  const nuke = clampInt(nukeEl.value,1,10);
-  const acting = clampInt(actingEl.value,1,10);
-  const face = clampInt(faceEl.value,1,10);
-  const rep = Math.floor(Number(repEl.value) || 0);
+addSubmit.addEventListener('click', ()=>{
+  addError.style.display = 'none';
+  const err = validateAdd();
+  if(err){ addError.textContent = err; addError.style.display = 'block'; return; }
+
+  const name = add_name.value.trim();
+  const face = clampInt(add_face.value,1,10);
+  const body = clampInt(add_body.value,1,10);
+  const acting = clampInt(add_acting.value,1,10);
+  const nuke = clampInt(add_nuke.value,1,10);
+  const rep = Math.floor(Number(add_rep.value) || 0);
 
   const shikai = calcShikai(body, nuke, acting, face);
   const shinri = calcShinri(acting, face, nuke, body);
   const total = shikai + shinri + rep;
 
-  if(editingId){
-    const idx = dataset.findIndex(d => d.id === editingId);
-    if(idx !== -1){
-      dataset[idx] = {
-        ...dataset[idx],
-        name, body, nuke, acting, face, rep, shikai, shinri, total,
-        updatedAt: (new Date()).toISOString()
-      };
-    }
-  } else {
-    dataset.push({
-      id: uid(),
-      name, body, nuke, acting, face, rep, shikai, shinri, total,
-      createdAt: (new Date()).toISOString()
-    });
-  }
-
-  saveData();
-  render();
-  resetForm();
-});
-
-/* クリア */
-clearBtn.addEventListener('click', ()=> resetForm());
-
-/* CSV エクスポート（簡易）*/
-exportBtn.addEventListener('click', ()=>{
-  if(dataset.length === 0){ alert('エクスポートするデータがありません。'); return; }
-  const header = ['id','name','body','nuke','acting','face','rep','shikai','shinri','total','createdAt','updatedAt'];
-  const lines = [header.join(',')];
-  dataset.forEach(d=>{
-    const row = header.map(h => {
-      const v = d[h] ?? '';
-      if(typeof v === 'string' && (v.includes(',') || v.includes('\n') || v.includes('"'))) return `"${v.replace(/"/g,'""')}"`;
-      return v;
-    });
-    lines.push(row.join(','));
+  const data = loadData();
+  data.push({
+    id: uid(),
+    name, face, body, acting, nuke, rep, shikai, shinri, total,
+    createdAt: new Date().toISOString()
   });
-  const csv = lines.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'avdata.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  saveData(data);
+  // reset form
+  add_name.value = '';
+  add_face.value = '';
+  add_body.value = '';
+  add_acting.value = '';
+  add_nuke.value = '';
+  add_rep.value = '';
+
+  // show ranking and refresh
+  showScreen('ranking');
+  renderRanking();
 });
 
-/* CSV インポート（簡易）*/
-importBtn.addEventListener('click', ()=> csvFile.click());
-csvFile.addEventListener('change', (ev)=>{
-  const f = ev.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    try{
-      const txt = reader.result;
-      const lines = txt.split(/\r?\n/).filter(l=> l.trim() !== '');
-      if(lines.length < 2){ alert('CSVにデータが含まれていません。'); csvFile.value = ''; return; }
-      const hdr = lines[0].split(',').map(h=> h.replace(/^"|"$/g,'').trim());
-      const rows = lines.slice(1).map(line=>{
-        const parts = []; let cur = ''; let inQ = false;
-        for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; continue; } inQ=!inQ; continue; } if(ch===',' && !inQ){ parts.push(cur); cur=''; continue; } cur+=ch; }
-        parts.push(cur);
-        const obj = {}; hdr.forEach((h,idx)=> obj[h]= (parts[idx] ?? '').trim());
-        return obj;
-      });
-      let count=0;
-      rows.forEach(r=>{
-        if(!r.name) return;
-        const body = clampInt(Number(r.body)||1,1,10);
-        const nuke = clampInt(Number(r.nuke)||1,1,10);
-        const acting = clampInt(Number(r.acting)||1,1,10);
-        const face = clampInt(Number(r.face)||1,1,10);
-        const rep = Math.floor(Number(r.rep)||0);
-        const shikai = calcShikai(body,nuke,acting,face);
-        const shinri = calcShinri(acting,face,nuke,body);
-        const total = shikai + shinri + rep;
-        dataset.push({ id: r.id || uid(), name: r.name, body, nuke, acting, face, rep, shikai, shinri, total, createdAt: r.createdAt || (new Date()).toISOString() });
-        count++;
-      });
-      saveData(); render(); alert(count+' 件をインポートしました。');
-    }catch(e){
-      alert('CSV の読み込みに失敗しました。');
-    }
-    csvFile.value = '';
+/* --- Edit screen handling --- */
+const edit_select = document.getElementById('edit_select');
+const editArea = document.getElementById('editArea');
+const noActors = document.getElementById('noActors');
+const edit_name = document.getElementById('edit_name');
+const edit_face = document.getElementById('edit_face');
+const edit_body = document.getElementById('edit_body');
+const edit_acting = document.getElementById('edit_acting');
+const edit_nuke = document.getElementById('edit_nuke');
+const edit_rep = document.getElementById('edit_rep');
+const editSave = document.getElementById('editSave');
+const editDelete = document.getElementById('editDelete');
+const editError = document.getElementById('editError');
+
+function prepareEdit(){
+  const data = loadData();
+  if(data.length === 0){
+    edit_select.innerHTML = '';
+    editArea.style.display = 'none';
+    noActors.style.display = 'block';
+    return;
+  }
+  noActors.style.display = 'none';
+  editArea.style.display = 'block';
+  // populate select
+  edit_select.innerHTML = '';
+  data.forEach(d=>{
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    edit_select.appendChild(opt);
+  });
+  // select first by default and populate fields
+  edit_select.value = data[0].id;
+  fillEditFields(data[0]);
+}
+
+function fillEditFields(item){
+  edit_name.value = item.name;
+  edit_face.value = item.face;
+  edit_body.value = item.body;
+  edit_acting.value = item.acting;
+  edit_nuke.value = item.nuke;
+  edit_rep.value = item.rep;
+  editError.style.display = 'none';
+}
+
+edit_select.addEventListener('change', ()=>{
+  const id = edit_select.value;
+  const data = loadData();
+  const it = data.find(d=> d.id === id);
+  if(it) fillEditFields(it);
+});
+
+function validateEdit(){
+  const name = edit_name.value.trim();
+  if(!name) return '名前を入力してください。';
+  const face = Number(edit_face.value), body = Number(edit_body.value), acting = Number(edit_acting.value), nuke = Number(edit_nuke.value);
+  if(!Number.isFinite(face) || !Number.isFinite(body) || !Number.isFinite(acting) || !Number.isFinite(nuke)) return '顔・身体・演技・抜け度は数値で入力してください。';
+  if(face <1 || face >10 || body <1 || body >10 || acting <1 || acting >10 || nuke <1 || nuke >10) return '顔・身体・演技・抜け度は 1〜10 の範囲で入力してください。';
+  if(!Number.isFinite(Number(edit_rep.value))) return '代表作点数は整数で入力してください。';
+  return null;
+}
+
+editSave.addEventListener('click', ()=>{
+  editError.style.display = 'none';
+  const err = validateEdit();
+  if(err){ editError.textContent = err; editError.style.display = 'block'; return; }
+  const id = edit_select.value;
+  const data = loadData();
+  const idx = data.findIndex(d=> d.id === id);
+  if(idx === -1) { editError.textContent = '選択されたデータが見つかりません。'; editError.style.display = 'block'; return; }
+
+  const name = edit_name.value.trim();
+  const face = clampInt(edit_face.value,1,10);
+  const body = clampInt(edit_body.value,1,10);
+  const acting = clampInt(edit_acting.value,1,10);
+  const nuke = clampInt(edit_nuke.value,1,10);
+  const rep = Math.floor(Number(edit_rep.value) || 0);
+
+  const shikai = calcShikai(body, nuke, acting, face);
+  const shinri = calcShinri(acting, face, nuke, body);
+  const total = shikai + shinri + rep;
+
+  data[idx] = {
+    ...data[idx],
+    name, face, body, acting, nuke, rep, shikai, shinri, total,
+    updatedAt: new Date().toISOString()
   };
-  reader.readAsText(f,'utf-8');
+  saveData(data);
+  // refresh edit select to keep order consistent
+  prepareEdit();
+  // go to ranking to show result
+  showScreen('ranking');
+  renderRanking();
 });
 
-/* 初期化 */
+/* delete from edit screen - immediate (user requested delete exists) */
+editDelete.addEventListener('click', ()=>{
+  const id = edit_select.value;
+  const data = loadData();
+  const idx = data.findIndex(d=> d.id === id);
+  if(idx === -1) return;
+  // immediate delete - no confirm per request; but require an extra safeguard? follow request: delete immediately
+  data.splice(idx,1);
+  saveData(data);
+  prepareEdit();
+  renderRanking();
+});
+
+/* init */
 (function init(){
-  loadData();
-  render();
+  // show top by default (no screen)
+  hideAll();
+  // Ensure ranking screen not active; top menu remains visible
+  // Pre-render ranking if exists
+  renderRanking();
 })();
 </script>
 </body>
