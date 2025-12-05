@@ -1,11 +1,9 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AV Quantification — 完全版</title>
-<meta name="description" content="AVランキング管理アプリ（ローカル保存）">
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>av_quant</title>
 <style>
   :root{
     --bg:#f7f7f9;
@@ -29,9 +27,8 @@
   .muted{color:var(--muted);font-size:13px;}
   .screen{display:none;}
   .screen.active{display:block;}
-  /* form layout */
   .form-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-  .form-row .label-col{width:100px;font-size:13px;color:var(--muted);}
+  .form-row .label-col{width:110px;font-size:13px;color:var(--muted);}
   .scores{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .score-col{display:flex;flex-direction:column;align-items:center;min-width:64px}
   .score-col label{font-size:13px;color:var(--muted);margin-bottom:6px;}
@@ -41,12 +38,14 @@
   table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;}
   th,td{padding:8px;border-bottom:1px solid #eef0f2;text-align:left;}
   th{background:#fbfbfc;font-weight:600;}
+  td.name-col{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:6ch;}
   .actions button{background:transparent;border:none;font-size:18px;cursor:pointer;padding:6px;border-radius:6px;}
   .actions button.edit{color:var(--accent);}
   .actions button.del{color:var(--danger);}
   .top-return{margin-top:12px;}
   .flex-between{display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .select-sort{padding:8px;border-radius:8px;border:1px solid #e6e7ea;}
+  .hidden{display:none;}
   @media (max-width:720px){
     .form-row{flex-direction:column;align-items:flex-start;}
     .form-row .label-col{width:auto;}
@@ -58,8 +57,8 @@
 <div class="wrap">
 
   <header>
-    <h1>AV Quantification</h1>
-    <div class="muted">データはブラウザ(localStorage)に保存されます</div>
+    <h1>av_quant</h1>
+    <div class="muted">データはブラウザ(localStorage)に保存。CSVでバックアップできます。</div>
   </header>
 
   <!-- トップメニュー -->
@@ -68,20 +67,27 @@
       <button class="btn" data-screen="ranking">ランキング表示</button>
       <button class="btn" data-screen="add">女優追加</button>
       <button class="btn" data-screen="edit">女優編集</button>
+      <button class="btn" id="csvImportBtn">CSV読み込み</button>
+      <button class="btn" id="csvExportBtn">CSV出力</button>
+      <input type="file" id="csvFile" accept=".csv" style="display:none">
     </div>
   </div>
 
   <!-- ランキング画面 -->
-  <section id="ranking" class="card screen">
+  <section id="ranking" class="card screen" aria-label="ランキング画面">
     <div class="flex-between">
       <h2 style="margin:0">ランキング</h2>
       <div>
         <label class="muted" for="sortSelect">並び替え：</label>
-        <select id="sortSelect" class="select-sort">
-          <option value="total_desc">total（降順）</option>
-          <option value="shikai_desc">視界制圧力（降順）</option>
-          <option value="shinri_desc">心理的引力（降順）</option>
-          <option value="rep_desc">代表作点数（降順）</option>
+        <select id="sortSelect" class="select-sort" aria-label="並び替え">
+          <option value="total_desc">total</option>
+          <option value="shikai_desc">視界制圧力</option>
+          <option value="shinri_desc">心理的引力</option>
+          <option value="rep_desc">代表作点数</option>
+          <option value="face_desc">顔</option>
+          <option value="body_desc">身体</option>
+          <option value="acting_desc">演技</option>
+          <option value="nuke_desc">抜け度</option>
           <option value="name_asc">名前（昇順）</option>
         </select>
       </div>
@@ -107,27 +113,27 @@
   </section>
 
   <!-- 女優追加画面 -->
-  <section id="add" class="card screen">
+  <section id="add" class="card screen" aria-label="女優追加画面">
     <h2 style="margin:0 0 8px 0">女優追加</h2>
 
     <div class="form-row">
       <div class="label-col">名前</div>
-      <div style="flex:1"><input type="text" id="add_name" placeholder="女優名を入力"></div>
+      <div style="flex:1"><input type="text" id="add_name" placeholder="女優名を入力" value=""></div>
     </div>
 
     <div class="form-row">
       <div class="label-col">顔 / 身体 / 演技 / 抜け度</div>
       <div class="scores">
-        <div class="score-col"><label>顔</label><input type="number" id="add_face" min="1" max="10" value="10"></div>
-        <div class="score-col"><label>身体</label><input type="number" id="add_body" min="1" max="10" value="10"></div>
-        <div class="score-col"><label>演技</label><input type="number" id="add_acting" min="1" max="10" value="5"></div>
-        <div class="score-col"><label>抜け度</label><input type="number" id="add_nuke" min="1" max="10" value="8"></div>
+        <div class="score-col"><label>顔</label><input type="number" id="add_face" min="1" max="10" value=""></div>
+        <div class="score-col"><label>身体</label><input type="number" id="add_body" min="1" max="10" value=""></div>
+        <div class="score-col"><label>演技</label><input type="number" id="add_acting" min="1" max="10" value=""></div>
+        <div class="score-col"><label>抜け度</label><input type="number" id="add_nuke" min="1" max="10" value=""></div>
       </div>
     </div>
 
     <div class="form-row" style="margin-top:8px;">
       <div class="label-col">代表作点数</div>
-      <div style="flex:1"><input type="number" id="add_rep" min="0" value="0"></div>
+      <div style="flex:1"><input type="number" id="add_rep" min="0" value=""></div>
     </div>
 
     <div style="margin-top:12px;display:flex;gap:8px;">
@@ -139,7 +145,7 @@
   </section>
 
   <!-- 女優編集画面 -->
-  <section id="edit" class="card screen">
+  <section id="edit" class="card screen" aria-label="女優編集画面">
     <h2 style="margin:0 0 8px 0">女優編集</h2>
 
     <div class="form-row">
@@ -152,22 +158,22 @@
     <div id="editArea" style="margin-top:12px;display:none;">
       <div class="form-row">
         <div class="label-col">名前</div>
-        <div style="flex:1"><input type="text" id="edit_name"></div>
+        <div style="flex:1"><input type="text" id="edit_name" value=""></div>
       </div>
 
       <div class="form-row">
         <div class="label-col">顔 / 身体 / 演技 / 抜け度</div>
         <div class="scores">
-          <div class="score-col"><label>顔</label><input type="number" id="edit_face" min="1" max="10"></div>
-          <div class="score-col"><label>身体</label><input type="number" id="edit_body" min="1" max="10"></div>
-          <div class="score-col"><label>演技</label><input type="number" id="edit_acting" min="1" max="10"></div>
-          <div class="score-col"><label>抜け度</label><input type="number" id="edit_nuke" min="1" max="10"></div>
+          <div class="score-col"><label>顔</label><input type="number" id="edit_face" min="1" max="10" value=""></div>
+          <div class="score-col"><label>身体</label><input type="number" id="edit_body" min="1" max="10" value=""></div>
+          <div class="score-col"><label>演技</label><input type="number" id="edit_acting" min="1" max="10" value=""></div>
+          <div class="score-col"><label>抜け度</label><input type="number" id="edit_nuke" min="1" max="10" value=""></div>
         </div>
       </div>
 
       <div class="form-row" style="margin-top:8px;">
         <div class="label-col">代表作点数</div>
-        <div style="flex:1"><input type="number" id="edit_rep" min="0"></div>
+        <div style="flex:1"><input type="number" id="edit_rep" min="0" value=""></div>
       </div>
 
       <div style="margin-top:12px;display:flex;gap:8px;">
@@ -186,37 +192,16 @@
 </div>
 
 <script>
-/*
- 完全版 JS
- - データは localStorage に 'avdata_v2' キーで保存
- - 計算式はユーザー指定のとおり
- - 画面遷移は data-screen 属性で制御
- - 追加/編集/削除のたびにソート（選択ソート）して表示を更新
-*/
+/* Persistent key */
+const STORAGE_KEY = 'avdata_v3';
 
-const STORAGE_KEY = 'avdata_v2';
-
-/* --- helper --- */
+/* Utilities */
 const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ return []; } }
+function saveData(data){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function clampInt(v, min, max){ const n = Math.floor(Number(v) || 0); if(n < min) return min; if(n > max) return max; return n; }
 
-function loadData(){
-  try{
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  }catch(e){
-    return [];
-  }
-}
-function saveData(data){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function clampInt(v,min,max){
-  const n = Math.floor(Number(v) || 0);
-  if(n < min) return min;
-  if(n > max) return max;
-  return n;
-}
-
-/* --- calculation (spec) --- */
+/* Calculation (spec) */
 function calcShikai(body, nuke, acting, face){
   return Math.floor(((body * 0.8) + (nuke * 0.6) + (acting * 0.4) + (face * 0.2)) * 5);
 }
@@ -224,77 +209,57 @@ function calcShinri(acting, face, nuke, body){
   return Math.floor(((acting * 0.8) + (face * 0.6) + (nuke * 0.4) + (body * 0.2)) * 5);
 }
 
-/* --- UI elements --- */
-const screens = document.querySelectorAll('[data-screen]');
+/* Screen control */
 const screenElems = {
-  top: null, // virtual
+  top: null,
   ranking: document.getElementById('ranking'),
   add: document.getElementById('add'),
   edit: document.getElementById('edit')
 };
-
 document.querySelectorAll('[data-screen]').forEach(btn=>{
-  btn.addEventListener('click', (e)=>{
+  btn.addEventListener('click', ()=> {
     const target = btn.getAttribute('data-screen');
-    if(target === 'top'){
-      showTop();
-    } else {
-      showScreen(target);
-    }
+    if(target === 'top') showTop();
+    else showScreen(target);
   });
 });
-
-/* top menu buttons */
 document.querySelectorAll('.topmenu button').forEach(b=>{
+  // csv buttons handled separately
+  if(b.id === 'csvImportBtn' || b.id === 'csvExportBtn') return;
   b.addEventListener('click', ()=> {
     const sc = b.getAttribute('data-screen');
-    showScreen(sc);
+    if(sc) showScreen(sc);
   });
 });
 
-/* navigation */
-function hideAll(){
-  document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active'));
-}
+function hideAll(){ document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active')); }
 function showScreen(name){
   hideAll();
   const el = screenElems[name];
   if(el) el.classList.add('active');
   if(name === 'ranking') renderRanking();
   if(name === 'edit') prepareEdit();
-}
-function showTop(){
-  hideAll();
-  // show nothing - top is just the top menu card (already visible)
-  // to make top visible simply scroll to top
   window.scrollTo({top:0,behavior:'smooth'});
 }
+function showTop(){ hideAll(); window.scrollTo({top:0,behavior:'smooth'}); }
 
-/* --- Ranking --- */
+/* Ranking rendering & sorting */
 const rankingBody = document.getElementById('rankingBody');
 const sortSelect = document.getElementById('sortSelect');
 
 function sortData(data, mode){
-  // Returns new array sorted
   const arr = data.slice();
   switch(mode){
-    case 'total_desc':
-      arr.sort((a,b)=> b.total - a.total);
-      break;
-    case 'shikai_desc':
-      arr.sort((a,b)=> b.shikai - a.shikai);
-      break;
-    case 'shinri_desc':
-      arr.sort((a,b)=> b.shinri - a.shinri);
-      break;
-    case 'rep_desc':
-      arr.sort((a,b)=> b.rep - a.rep);
-      break;
-    case 'name_asc':
-      arr.sort((a,b)=> a.name.localeCompare(b.name));
-      break;
-    default:
-      arr.sort((a,b)=> b.total - a.total);
+    case 'total_desc': arr.sort((a,b)=> (b.shikai + b.shinri + b.rep) - (a.shikai + a.shinri + a.rep)); break;
+    case 'shikai_desc': arr.sort((a,b)=> b.shikai - a.shikai); break;
+    case 'shinri_desc': arr.sort((a,b)=> b.shinri - a.shinri); break;
+    case 'rep_desc': arr.sort((a,b)=> b.rep - a.rep); break;
+    case 'face_desc': arr.sort((a,b)=> b.face - a.face); break;
+    case 'body_desc': arr.sort((a,b)=> b.body - a.body); break;
+    case 'acting_desc': arr.sort((a,b)=> b.acting - a.acting); break;
+    case 'nuke_desc': arr.sort((a,b)=> b.nuke - a.nuke); break;
+    case 'name_asc': arr.sort((a,b)=> a.name.localeCompare(b.name)); break;
+    default: arr.sort((a,b)=> (b.shikai + b.shinri + b.rep) - (a.shikai + a.shinri + a.rep));
   }
   return arr;
 }
@@ -308,36 +273,31 @@ function renderRanking(){
   list.forEach((it, idx) => {
     const tr = document.createElement('tr');
 
-    const tdName = document.createElement('td'); tdName.textContent = it.name;
+    const tdName = document.createElement('td'); tdName.className = 'name-col'; tdName.textContent = it.name;
     const tdRank = document.createElement('td'); tdRank.textContent = idx + 1;
     const tdShikai = document.createElement('td'); tdShikai.textContent = it.shikai;
     const tdShinri = document.createElement('td'); tdShinri.textContent = it.shinri;
     const tdRep = document.createElement('td'); tdRep.textContent = it.rep;
 
-    const tdOps = document.createElement('td');
-    tdOps.className = 'actions';
+    const tdOps = document.createElement('td'); tdOps.className = 'actions';
     const btnEdit = document.createElement('button'); btnEdit.className = 'edit'; btnEdit.title = '編集'; btnEdit.innerHTML = '✎';
     const btnDel = document.createElement('button'); btnDel.className = 'del'; btnDel.title = '削除'; btnDel.innerHTML = '✕';
-    // edit should open edit screen with that actor selected
+
     btnEdit.addEventListener('click', ()=> {
       showScreen('edit');
-      // small timeout to ensure select populated
+      // wait for select population
       setTimeout(()=> {
         const sel = document.getElementById('edit_select');
         sel.value = it.id;
         sel.dispatchEvent(new Event('change'));
       }, 150);
     });
+
     btnDel.addEventListener('click', ()=> {
-      // immediate delete (as requested)
-      const res = confirm(`「${it.name}」を削除しますか？（確認ダイアログ）`); 
-      // Note: user requested no confirm earlier for general deletes, but deletion from ranking we add a confirm for safety.
-      // If you want no confirm here, change to immediate deletion.
-      if(res){
-        const all = loadData().filter(d => d.id !== it.id);
-        saveData(all);
-        renderRanking();
-      }
+      // immediate delete (no confirm)
+      const all = loadData().filter(d => d.id !== it.id);
+      saveData(all);
+      renderRanking();
     });
 
     tdOps.appendChild(btnEdit);
@@ -353,11 +313,9 @@ function renderRanking(){
     rankingBody.appendChild(tr);
   });
 }
-
-/* sort change */
 sortSelect.addEventListener('change', ()=> renderRanking());
 
-/* --- Add screen handling --- */
+/* Add screen logic */
 const add_name = document.getElementById('add_name');
 const add_face = document.getElementById('add_face');
 const add_body = document.getElementById('add_body');
@@ -400,7 +358,8 @@ addSubmit.addEventListener('click', ()=>{
     createdAt: new Date().toISOString()
   });
   saveData(data);
-  // reset form
+
+  // reset form -> empty
   add_name.value = '';
   add_face.value = '';
   add_body.value = '';
@@ -408,12 +367,11 @@ addSubmit.addEventListener('click', ()=>{
   add_nuke.value = '';
   add_rep.value = '';
 
-  // show ranking and refresh
   showScreen('ranking');
   renderRanking();
 });
 
-/* --- Edit screen handling --- */
+/* Edit screen logic */
 const edit_select = document.getElementById('edit_select');
 const editArea = document.getElementById('editArea');
 const noActors = document.getElementById('noActors');
@@ -437,7 +395,6 @@ function prepareEdit(){
   }
   noActors.style.display = 'none';
   editArea.style.display = 'block';
-  // populate select
   edit_select.innerHTML = '';
   data.forEach(d=>{
     const opt = document.createElement('option');
@@ -445,18 +402,17 @@ function prepareEdit(){
     opt.textContent = d.name;
     edit_select.appendChild(opt);
   });
-  // select first by default and populate fields
   edit_select.value = data[0].id;
   fillEditFields(data[0]);
 }
 
 function fillEditFields(item){
-  edit_name.value = item.name;
-  edit_face.value = item.face;
-  edit_body.value = item.body;
-  edit_acting.value = item.acting;
-  edit_nuke.value = item.nuke;
-  edit_rep.value = item.rep;
+  edit_name.value = item.name || '';
+  edit_face.value = item.face || '';
+  edit_body.value = item.body || '';
+  edit_acting.value = item.acting || '';
+  edit_nuke.value = item.nuke || '';
+  edit_rep.value = item.rep || '';
   editError.style.display = 'none';
 }
 
@@ -481,6 +437,7 @@ editSave.addEventListener('click', ()=>{
   editError.style.display = 'none';
   const err = validateEdit();
   if(err){ editError.textContent = err; editError.style.display = 'block'; return; }
+
   const id = edit_select.value;
   const data = loadData();
   const idx = data.findIndex(d=> d.id === id);
@@ -503,32 +460,94 @@ editSave.addEventListener('click', ()=>{
     updatedAt: new Date().toISOString()
   };
   saveData(data);
-  // refresh edit select to keep order consistent
   prepareEdit();
-  // go to ranking to show result
   showScreen('ranking');
   renderRanking();
 });
 
-/* delete from edit screen - immediate (user requested delete exists) */
 editDelete.addEventListener('click', ()=>{
   const id = edit_select.value;
   const data = loadData();
   const idx = data.findIndex(d=> d.id === id);
   if(idx === -1) return;
-  // immediate delete - no confirm per request; but require an extra safeguard? follow request: delete immediately
   data.splice(idx,1);
   saveData(data);
   prepareEdit();
   renderRanking();
 });
 
-/* init */
+/* CSV import/export
+   - Import replaces existing data (A)
+   - CSV format: header (optional) then rows: 名前,顔,身体,演技,抜け度,代表作点数
+*/
+const csvImportBtn = document.getElementById('csvImportBtn');
+const csvExportBtn = document.getElementById('csvExportBtn');
+const csvFile = document.getElementById('csvFile');
+
+csvImportBtn.addEventListener('click', ()=> csvFile.click());
+csvFile.addEventListener('change', (ev)=>{
+  const f = ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=> {
+    const txt = reader.result.replace(/\r/g,'');
+    const lines = txt.split('\n').map(l=> l.trim()).filter(l=> l.length > 0);
+    if(lines.length === 0){ alert('CSVにデータが含まれていません。'); csvFile.value = ''; return; }
+
+    // If first line contains non-numeric in 2nd column -> treat as header and skip
+    let start = 0;
+    const firstCols = lines[0].split(',').map(s=>s.trim());
+    if(firstCols.length > 1 && isNaN(Number(firstCols[1]))) start = 1;
+
+    const rows = [];
+    for(let i = start; i < lines.length; i++){
+      const cols = lines[i].split(',').map(c=> c.trim());
+      const name = cols[0] || '';
+      if(!name) continue;
+      const face = clampInt(cols[1],1,10);
+      const body = clampInt(cols[2],1,10);
+      const acting = clampInt(cols[3],1,10);
+      const nuke = clampInt(cols[4],1,10);
+      const rep = Math.floor(Number(cols[5]) || 0);
+      const shikai = calcShikai(body, nuke, acting, face);
+      const shinri = calcShinri(acting, face, nuke, body);
+      const total = shikai + shinri + rep;
+      rows.push({ id: uid(), name, face, body, acting, nuke, rep, shikai, shinri, total, createdAt: new Date().toISOString() });
+    }
+
+    // Replace existing data (A)
+    saveData(rows);
+    csvFile.value = '';
+    showScreen('ranking');
+    renderRanking();
+    alert(rows.length + ' 件をインポートしました（既存データを上書き）。');
+  };
+  reader.readAsText(f, 'UTF-8');
+});
+
+csvExportBtn.addEventListener('click', ()=>{
+  const data = loadData();
+  if(data.length === 0){ alert('出力するデータがありません。'); return; }
+  const header = ['名前','顔','身体','演技','抜け度','代表作点数'];
+  const lines = [header.join(',')];
+  data.forEach(d=>{
+    lines.push([d.name,d.face,d.body,d.acting,d.nuke,d.rep].join(','));
+  });
+  const csv = lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'avdata.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* Init */
 (function init(){
-  // show top by default (no screen)
   hideAll();
-  // Ensure ranking screen not active; top menu remains visible
-  // Pre-render ranking if exists
   renderRanking();
 })();
 </script>
