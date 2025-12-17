@@ -1,794 +1,279 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>av_quant</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>av_quant v5.1</title>
+
 <style>
-  :root{
-    --bg:#f7f7f9;
-    --card:#fff;
-    --accent:#0b66ff;
-    --danger:#e5533d;
-    --muted:#6b7280;
-    --radius:12px;
-    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;
-    color:#111;
-  }
-  html,body{height:100%;margin:0;background:var(--bg);}
-  .wrap{max-width:960px;margin:16px auto;padding:16px;box-sizing:border-box;}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  h1{font-size:18px;margin:0;}
-  .card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px;}
-  .topmenu{display:flex;gap:8px;flex-wrap:wrap;}
-  .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:14px;cursor:pointer;}
-  .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);}
-  .btn.danger{background:var(--danger);color:#fff;border:none;}
-  .muted{color:var(--muted);font-size:13px;}
-  .screen{display:none;}
-  .screen.active{display:block;}
-  .form-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-  .form-row .label-col{width:110px;font-size:13px;color:var(--muted);}
-  .scores{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-  .score-col{display:flex;flex-direction:column;align-items:center;min-width:64px}
-  .score-col label{font-size:13px;color:var(--muted);margin-bottom:6px;}
-  input[type="number"], input[type="text"], select, textarea{padding:8px;border-radius:8px;border:1px solid #e6e7ea;font-size:14px;box-sizing:border-box;}
-  input[type="number"]{width:72px;text-align:center;}
-  input[type="text"]{width:100%;}
-  textarea{width:100%;min-height:160px;resize:vertical;}
-  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;}
-  th,td{padding:8px;border-bottom:1px solid #eef0f2;text-align:left;}
-  th{background:#fbfbfc;font-weight:600;}
-  td.name-col{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:6ch;}
-  .actions button{background:transparent;border:none;font-size:18px;cursor:pointer;padding:6px;border-radius:6px;}
-  .actions button.edit{color:var(--accent);}
-  .actions button.del{color:var(--danger);}
-  .top-return{margin-top:12px;}
-  .flex-between{display:flex;justify-content:space-between;align-items:center;gap:8px;}
-  .select-sort{padding:8px;border-radius:8px;border:1px solid #e6e7ea;}
-  .hidden{display:none;}
-  .small{font-size:13px;color:var(--muted);}
-  @media (max-width:720px){
-    .form-row{flex-direction:column;align-items:flex-start;}
-    .form-row .label-col{width:auto;}
-    .scores{gap:6px;}
-  }
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;
+  background:#f7f7f9;
+}
+.wrap{max-width:960px;margin:16px auto;padding:16px}
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+.btn{background:#0b66ff;color:#fff}
+.btn.ghost{background:#fff;color:#0b66ff;border:1px solid #0b66ff}
+.btn.danger{background:#e5533d;color:#fff}
+.screen{display:none}
+.screen.active{display:block}
+input,select,textarea{padding:8px;border-radius:8px;border:1px solid #ccc;font-size:14px}
+textarea{width:100%;min-height:160px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:center}
+th{background:#fafafa}
+
+.chartWrap{
+  display:flex;
+  gap:24px;
+  align-items:center;
+}
+.chartBox{
+  width:360px;
+  height:360px;
+}
+.metricBox{
+  font-size:16px;
+  line-height:2;
+}
+.metricBox div{
+  font-weight:600;
+}
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 <div class="wrap">
 
-  <header>
-    <h1>av_quant</h1>
-    <div class="muted">データはブラウザ(localStorage)に保存されます（ファイル操作不要）。</div>
-  </header>
+<div class="card">
+<button class="btn" data-screen="ranking">ランキング</button>
+<button class="btn" data-screen="add">追加</button>
+<button class="btn" data-screen="edit">編集</button>
+<button class="btn" data-screen="io">CSV</button>
+</div>
 
-  <!-- トップメニュー -->
-  <div class="card">
-    <div class="topmenu">
-      <button class="btn" data-screen="ranking">ランキング表示</button>
-      <button class="btn" data-screen="add">女優追加</button>
-      <button class="btn" data-screen="edit">女優編集</button>
-      <button class="btn" data-screen="io">情報入出力</button>
-    </div>
+<section id="ranking" class="card screen active">
+<h2>ランキング</h2>
+<select id="sortSelect">
+<option value="view">視界制圧力</option>
+<option value="mind">心理的引力</option>
+<option value="lust">煽情恒常力</option>
+</select>
+<table>
+<thead>
+<tr>
+<th>順位</th><th>名前</th>
+<th>視界</th><th>心理</th><th>煽情</th>
+<th>操作</th>
+</tr>
+</thead>
+<tbody id="rankingBody"></tbody>
+</table>
+</section>
+
+<section id="add" class="card screen">
+<h2>追加</h2>
+<input id="add_name" placeholder="名前"><br><br>
+顔<input id="add_face" type="number"><br>
+身体<input id="add_body" type="number"><br>
+演技<input id="add_acting" type="number"><br>
+抜け度<input id="add_nuke" type="number"><br>
+安定感<input id="add_stable" type="number"><br><br>
+<button class="btn" id="addBtn">追加</button>
+</section>
+
+<section id="edit" class="card screen">
+<h2>編集</h2>
+<select id="edit_select"></select><br><br>
+<input id="edit_name"><br>
+顔<input id="edit_face" type="number"><br>
+身体<input id="edit_body" type="number"><br>
+演技<input id="edit_acting" type="number"><br>
+抜け度<input id="edit_nuke" type="number"><br>
+安定感<input id="edit_stable" type="number"><br><br>
+<button class="btn" id="saveBtn">更新</button>
+<button class="btn danger" id="delBtn">削除</button>
+</section>
+
+<section id="io" class="card screen">
+<h2>CSV入出力</h2>
+<textarea id="csvText"></textarea><br><br>
+<button class="btn" id="importBtn">追記読み込み</button>
+<button class="btn ghost" id="exportBtn">書き出し</button>
+</section>
+
+<section id="chart" class="card screen">
+<h2 id="chartTitle"></h2>
+<div class="chartWrap">
+  <div class="chartBox">
+    <canvas id="radar"></canvas>
   </div>
-
-  <!-- ランキング画面 -->
-  <section id="ranking" class="card screen" aria-label="ランキング画面">
-    <div class="flex-between">
-      <h2 style="margin:0">ランキング</h2>
-      <div>
-        <label class="muted" for="sortSelect">並び替え：</label>
-        <select id="sortSelect" class="select-sort" aria-label="並び替え">
-          <option value="total_desc">total（基本）</option>
-          <option value="shikai_desc">視界制圧力（降順）</option>
-          <option value="shinri_desc">心理的引力（降順）</option>
-          <option value="rep_desc">代表作点数（降順）</option>
-          <option value="face_desc">顔（降順）</option>
-          <option value="body_desc">身体（降順）</option>
-          <option value="acting_desc">演技（降順）</option>
-          <option value="nuke_desc">抜け度（降順）</option>
-          <option value="name_asc">名前（昇順）</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="rankingTableWrap">
-      <table aria-label="ランキング表">
-        <thead id="rankingThead"><tr></tr></thead>
-        <tbody id="rankingBody"></tbody>
-      </table>
-    </div>
-
-    <div class="top-return">
-      <button class="btn ghost" data-screen="top">トップメニューに戻る</button>
-    </div>
-  </section>
-
-  <!-- 女優追加画面 -->
-  <section id="add" class="card screen" aria-label="女優追加画面">
-    <h2 style="margin:0 0 8px 0">女優追加</h2>
-
-    <div class="form-row">
-      <div class="label-col">名前</div>
-      <div style="flex:1"><input type="text" id="add_name" placeholder="女優名を入力" value=""></div>
-    </div>
-
-    <div class="form-row">
-      <div class="label-col">顔 / 身体 / 演技 / 抜け度</div>
-      <div class="scores">
-        <div class="score-col"><label>顔</label><input type="number" id="add_face" min="1" max="10" value=""></div>
-        <div class="score-col"><label>身体</label><input type="number" id="add_body" min="1" max="10" value=""></div>
-        <div class="score-col"><label>演技</label><input type="number" id="add_acting" min="1" max="10" value=""></div>
-        <div class="score-col"><label>抜け度</label><input type="number" id="add_nuke" min="1" max="10" value=""></div>
-      </div>
-    </div>
-
-    <div class="form-row" style="margin-top:8px;">
-      <div class="label-col">代表作点数</div>
-      <div style="flex:1"><input type="number" id="add_rep" min="0" value=""></div>
-    </div>
-
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button class="btn" id="addSubmit">追加</button>
-      <button class="btn ghost" data-screen="top">トップメニュー</button>
-    </div>
-
-    <div id="addError" class="muted" style="margin-top:8px;color:#e5533d;display:none;"></div>
-  </section>
-
-  <!-- 情報入出力画面 -->
-  <section id="io" class="card screen" aria-label="情報入出力">
-    <h2 style="margin:0 0 8px 0">情報入出力（テキストで貼り付け／コピー）</h2>
-    <div class="muted">一括入力：下のテキスト欄に**CSV形式（カンマ区切り）**または<br>「名前行」「数値行（空白またはカンマ区切り）」のペアを貼り付けて「一括登録」を押してください。既存データは保持され追加されます。</div>
-
-    <div class="form-row" style="margin-top:12px;">
-      <textarea id="io_text" placeholder="例（CSV形式）
-名前,顔,身体,演技,抜け度,代表作点数
-美園和花,9,9,9,9,90
-葵百合香,7,8,9,9,88
-
-または
-
-美園和花
-9 9 9 9 90
-
-葵百合香
-7 8 9 9 88
-"></textarea>
-    </div>
-
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn" id="io_import">一括登録（追加）</button>
-      <button class="btn" id="io_export">一括出力（表示）</button>
-      <button class="btn ghost" id="io_copy">COPY（出力内容をクリップボードへ）</button>
-      <button class="btn ghost" data-screen="top">トップメニュー</button>
-    </div>
-
-    <div id="io_result" class="muted" style="margin-top:8px;display:none;"></div>
-  </section>
-
-  <!-- 女優編集画面 -->
-  <section id="edit" class="card screen" aria-label="女優編集画面">
-    <h2 style="margin:0 0 8px 0">女優編集</h2>
-
-    <div class="form-row">
-      <div class="label-col">編集対象</div>
-      <div style="flex:1">
-        <select id="edit_select" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e7ea;"></select>
-      </div>
-    </div>
-
-    <div id="editArea" style="margin-top:12px;display:none;">
-      <div class="form-row">
-        <div class="label-col">名前</div>
-        <div style="flex:1"><input type="text" id="edit_name" value=""></div>
-      </div>
-
-      <div class="form-row">
-        <div class="label-col">顔 / 身体 / 演技 / 抜け度</div>
-        <div class="scores">
-          <div class="score-col"><label>顔</label><input type="number" id="edit_face" min="1" max="10" value=""></div>
-          <div class="score-col"><label>身体</label><input type="number" id="edit_body" min="1" max="10" value=""></div>
-          <div class="score-col"><label>演技</label><input type="number" id="edit_acting" min="1" max="10" value=""></div>
-          <div class="score-col"><label>抜け度</label><input type="number" id="edit_nuke" min="1" max="10" value=""></div>
-        </div>
-      </div>
-
-      <div class="form-row" style="margin-top:8px;">
-        <div class="label-col">代表作点数</div>
-        <div style="flex:1"><input type="number" id="edit_rep" min="0" value=""></div>
-      </div>
-
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button class="btn" id="editSave">更新</button>
-        <button class="btn danger" id="editDelete">削除</button>
-        <button class="btn ghost" data-screen="top">トップメニュー</button>
-      </div>
-      <div id="editError" class="muted" style="margin-top:8px;color:#e5533d;display:none;"></div>
-    </div>
-
-    <div id="noActors" class="muted" style="display:none;margin-top:8px;">
-      女優情報がありません。<button class="btn ghost" data-screen="top" style="margin-left:8px;">トップメニューへ</button>
-    </div>
-  </section>
+  <div class="metricBox">
+    <div>視界制圧力：<span id="cv"></span></div>
+    <div>心理的引力：<span id="cm"></span></div>
+    <div>煽情恒常力：<span id="cl"></span></div>
+  </div>
+</div>
+<br>
+<button class="btn ghost" data-screen="ranking">戻る</button>
+</section>
 
 </div>
 
 <script>
-/* STORAGE KEY */
-const STORAGE_KEY = 'avdata_v3';
+const KEY="av_quant_v51";
+const screens=document.querySelectorAll(".screen");
 
-/* Utilities */
-const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-function loadData(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    return normalizeRecords(raw);
-  }catch(e){
-    return [];
-  }
+function show(id){
+  screens.forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
 }
-function saveData(data){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function clampInt(v, min, max){
-  const n = Math.floor(Number(v) || 0);
-  if(n < min) return min;
-  if(n > max) return max;
-  return n;
+document.querySelectorAll("[data-screen]").forEach(b=>{
+  b.onclick=()=>show(b.dataset.screen);
+});
+
+function load(){return JSON.parse(localStorage.getItem(KEY)||"[]")}
+function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
+
+function calc(a){
+  a.view=Math.floor(a.body*1.5+a.nuke*1.25+a.acting*1+a.face*0.75+a.stable*0.5);
+  a.mind=Math.floor(a.acting*1.5+a.nuke*1.25+a.face*1+a.body*0.75+a.stable*0.5);
+  a.lust=Math.floor(a.stable*1.5+a.face*1.25+a.acting*1+a.body*0.75+a.nuke*0.5);
 }
 
-/* Calculation (spec) */
-function calcShikai(body, nuke, acting, face){
-  return Math.floor(((body * 0.8) + (nuke * 0.6) + (acting * 0.4) + (face * 0.2)) * 5);
-}
-function calcShinri(acting, face, nuke, body){
-  return Math.floor(((acting * 0.8) + (face * 0.6) + (nuke * 0.4) + (body * 0.2)) * 5);
-}
-
-/* normalize records: ensure numeric fields and computed fields exist */
-function normalizeRecord(rec){
-  const obj = Object.assign({}, rec);
-  obj.name = (obj.name || '').toString();
-  obj.face = Number.isFinite(Number(obj.face)) ? Math.floor(Number(obj.face)) : 0;
-  obj.body = Number.isFinite(Number(obj.body)) ? Math.floor(Number(obj.body)) : 0;
-  obj.acting = Number.isFinite(Number(obj.acting)) ? Math.floor(Number(obj.acting)) : 0;
-  obj.nuke = Number.isFinite(Number(obj.nuke)) ? Math.floor(Number(obj.nuke)) : 0;
-  obj.rep = Number.isFinite(Number(obj.rep)) ? Math.floor(Number(obj.rep)) : 0;
-  // enforce ranges for 1-10 fields if non-zero, but allow zero if input was zero
-  if(obj.face === 0) obj.face = 0;
-  if(obj.body === 0) obj.body = 0;
-  if(obj.acting === 0) obj.acting = 0;
-  if(obj.nuke === 0) obj.nuke = 0;
-  // compute derived
-  obj.shikai = calcShikai(obj.body, obj.nuke, obj.acting, obj.face);
-  obj.shinri = calcShinri(obj.acting, obj.face, obj.nuke, obj.body);
-  obj.total = obj.shikai + obj.shinri + obj.rep;
-  if(!obj.id) obj.id = uid();
-  return obj;
-}
-function normalizeRecords(arr){
-  return (arr || []).map(normalizeRecord);
+function render(){
+  const body=document.getElementById("rankingBody");
+  body.innerHTML="";
+  const data=load();
+  const mode=sortSelect.value;
+  data.forEach(calc);
+  data.sort((a,b)=>b[mode]-a[mode]);
+  data.forEach((a,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${i+1}</td><td>${a.name}</td>
+      <td>${a.view}</td><td>${a.mind}</td><td>${a.lust}</td>
+      <td><button onclick="openChart('${a.id}')">📊</button></td>`;
+    body.appendChild(tr);
+  });
+  renderEdit();
 }
 
-/* Screen control */
-const screenElems = {
-  top: null,
-  ranking: document.getElementById('ranking'),
-  add: document.getElementById('add'),
-  edit: document.getElementById('edit'),
-  io: document.getElementById('io')
+function openChart(id){
+  const a=load().find(x=>x.id===id);
+  if(!a)return;
+  calc(a);
+  show("chart");
+  chartTitle.textContent=a.name;
+  cv.textContent=a.view;
+  cm.textContent=a.mind;
+  cl.textContent=a.lust;
+
+  if(window.radarChart) radarChart.destroy();
+  radarChart=new Chart(radar,{
+    type:"radar",
+    data:{
+      labels:["顔","身体","演技","抜け度","安定感"],
+      datasets:[{
+        data:[a.face,a.body,a.acting,a.nuke,a.stable],
+        fill:true
+      }]
+    },
+    options:{
+      scales:{
+        r:{
+          min:0,
+          max:100,
+          ticks:{stepSize:20}
+        }
+      }
+    }
+  });
+}
+
+addBtn.onclick=()=>{
+  const d=load();
+  d.push({
+    id:Date.now().toString(),
+    name:add_name.value,
+    face:+add_face.value||0,
+    body:+add_body.value||0,
+    acting:+add_acting.value||0,
+    nuke:+add_nuke.value||0,
+    stable:+add_stable.value||0
+  });
+  save(d);render();show("ranking");
 };
-document.querySelectorAll('[data-screen]').forEach(btn=>{
-  btn.addEventListener('click', ()=> {
-    const target = btn.getAttribute('data-screen');
-    if(target === 'top') showTop();
-    else showScreen(target);
-  });
-});
-document.querySelectorAll('.topmenu button').forEach(b=>{
-  b.addEventListener('click', ()=> {
-    const sc = b.getAttribute('data-screen');
-    if(sc) showScreen(sc);
-  });
-});
-function hideAll(){ document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active')); }
-function showScreen(name){
-  hideAll();
-  const el = screenElems[name];
-  if(el) el.classList.add('active');
-  if(name === 'ranking') renderRanking();
-  if(name === 'edit') prepareEdit();
-  if(name === 'io') { document.getElementById('io_result').style.display = 'none'; }
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function showTop(){ hideAll(); window.scrollTo({top:0,behavior:'smooth'}); }
 
-/* Ranking rendering logic with dynamic columns */
-const rankingBody = document.getElementById('rankingBody');
-const rankingThead = document.getElementById('rankingThead').querySelector('tr');
-const sortSelect = document.getElementById('sortSelect');
-
-function sortData(data, mode){
-  const arr = data.slice();
-  switch(mode){
-    case 'total_desc':
-      arr.sort((a,b)=> b.total - a.total);
-      break;
-    case 'shikai_desc': arr.sort((a,b)=> b.shikai - a.shikai); break;
-    case 'shinri_desc': arr.sort((a,b)=> b.shinri - a.shinri); break;
-    case 'rep_desc': arr.sort((a,b)=> b.rep - a.rep); break;
-    case 'face_desc': arr.sort((a,b)=> b.face - a.face); break;
-    case 'body_desc': arr.sort((a,b)=> b.body - a.body); break;
-    case 'acting_desc': arr.sort((a,b)=> b.acting - a.acting); break;
-    case 'nuke_desc': arr.sort((a,b)=> b.nuke - a.nuke); break;
-    case 'name_asc': arr.sort((a,b)=> a.name.localeCompare(b.name)); break;
-    default:
-      arr.sort((a,b)=> b.total - a.total);
-  }
-  return arr;
+function renderEdit(){
+  edit_select.innerHTML="";
+  load().forEach(a=>{
+    const o=document.createElement("option");
+    o.value=a.id;o.textContent=a.name;
+    edit_select.appendChild(o);
+  });
 }
 
-/* Determine visible columns and their order based on mode */
-function columnsForMode(mode){
-  // keys: face, body, acting, nuke, shikai, shinri, rep, name
-  const all = ['face','body','acting','nuke','shikai','shinri','rep','name'];
-  if(mode === 'total_desc'){
-    // default view: only shikai, shinri, rep (and name+rank)
-    return ['name','rank','shikai','shinri','rep'];
-  }
-  // when sorting by a specific metric, show all metrics and move sorted key first (leftmost)
-  // map mode to key
-  const map = {
-    shikai_desc: 'shikai',
-    shinri_desc: 'shinri',
-    rep_desc: 'rep',
-    face_desc: 'face',
-    body_desc: 'body',
-    acting_desc: 'acting',
-    nuke_desc: 'nuke',
-    name_asc: 'name'
-  };
-  const primary = map[mode] || 'total';
-  // leftmost should be primary (except if primary is 'name' we still show name last maybe)
-  // We'll put primary first, then the rest in a sensible order, finally include rank and total not shown
-  const order = [];
-  if(primary !== 'name') order.push(primary);
-  // then add remaining metrics in a fixed order avoiding duplicates
-  ['face','body','acting','nuke','shikai','shinri','rep'].forEach(k=>{
-    if(k !== primary) order.push(k);
+edit_select.onchange=()=>{
+  const a=load().find(x=>x.id===edit_select.value);
+  if(!a)return;
+  edit_name.value=a.name;
+  edit_face.value=a.face;
+  edit_body.value=a.body;
+  edit_acting.value=a.acting;
+  edit_nuke.value=a.nuke;
+  edit_stable.value=a.stable;
+};
+
+saveBtn.onclick=()=>{
+  const d=load();
+  const i=d.findIndex(x=>x.id===edit_select.value);
+  if(i<0)return;
+  Object.assign(d[i],{
+    name:edit_name.value,
+    face:+edit_face.value,
+    body:+edit_body.value,
+    acting:+edit_acting.value,
+    nuke:+edit_nuke.value,
+    stable:+edit_stable.value
   });
-  // append name and rank at end (user asked sorted column to be leftmost; name can be last)
-  order.push('name');
-  order.unshift('rank'); // rank as first column after name? The user wanted the sorted column to be leftmost; but also requested "that item displayed at left" — we'll present rank then primary to preserve ranking number visibility.
-  // adjust to have primary leftmost visually: we'll arrange columns so primary is leftmost (before rank) if user prefers. According to instruction: "その項目の値を一番左に表示" — put primary column as absolute left. So modify:
-  // place primary at start, then rank next.
-  const final = [];
-  if(primary !== 'name'){
-    final.push(primary);
-    final.push('rank');
-    order.forEach(k=> { if(k!==primary && k!=='rank') final.push(k); });
-  } else {
-    // if primary is name, put name first, then rank, then rest
-    final.push('name');
-    final.push('rank');
-    ['face','body','acting','nuke','shikai','shinri','rep'].forEach(k=> final.push(k));
-  }
-  // ensure uniqueness
-  return Array.from(new Set(final));
-}
+  save(d);render();show("ranking");
+};
 
-/* Render ranking table according to selected mode */
-function renderRanking(){
-  const data = loadData();
-  const mode = sortSelect.value;
-  const list = sortData(data, mode);
+delBtn.onclick=()=>{
+  save(load().filter(x=>x.id!==edit_select.value));
+  render();show("ranking");
+};
 
-  // determine columns
-  const cols = columnsForMode(mode);
-
-  // build THEAD
-  rankingThead.innerHTML = '';
-  cols.forEach(col => {
-    const th = document.createElement('th');
-    switch(col){
-      case 'rank': th.textContent = '順位'; break;
-      case 'shikai': th.textContent = '視界制圧力'; break;
-      case 'shinri': th.textContent = '心理的引力'; break;
-      case 'rep': th.textContent = '代表作点数'; break;
-      case 'face': th.textContent = '顔'; break;
-      case 'body': th.textContent = '身体'; break;
-      case 'acting': th.textContent = '演技'; break;
-      case 'nuke': th.textContent = '抜け度'; break;
-      case 'name': th.textContent = '名前'; break;
-      default: th.textContent = col; break;
-    }
-    rankingThead.appendChild(th);
-  });
-
-  // clear body
-  rankingBody.innerHTML = '';
-
-  list.forEach((it, idx) => {
-    const tr = document.createElement('tr');
-    cols.forEach(col=>{
-      const td = document.createElement('td');
-      switch(col){
-        case 'rank': td.textContent = idx + 1; break;
-        case 'name': td.className = 'name-col'; td.textContent = it.name; break;
-        case 'shikai': td.textContent = it.shikai; break;
-        case 'shinri': td.textContent = it.shinri; break;
-        case 'rep': td.textContent = it.rep; break;
-        case 'face': td.textContent = it.face; break;
-        case 'body': td.textContent = it.body; break;
-        case 'acting': td.textContent = it.acting; break;
-        case 'nuke': td.textContent = it.nuke; break;
-        default: td.textContent = it[col] || ''; break;
-      }
-      tr.appendChild(td);
+importBtn.onclick=()=>{
+  const lines=csvText.value.trim().split("\n");
+  const d=load();
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(",");
+    if(c.length<6)continue;
+    d.push({
+      id:Date.now()+""+i,
+      name:c[0],
+      face:+c[1],body:+c[2],acting:+c[3],nuke:+c[4],stable:+c[5]
     });
+  }
+  save(d);render();show("ranking");
+};
 
-    // append operations column if not already present (we keep operations on the right)
-    const tdOps = document.createElement('td');
-    tdOps.className = 'actions';
-    const btnEdit = document.createElement('button'); btnEdit.className = 'edit'; btnEdit.title = '編集'; btnEdit.innerHTML = '✎';
-    const btnDel = document.createElement('button'); btnDel.className = 'del'; btnDel.title = '削除'; btnDel.innerHTML = '✕';
-    btnEdit.addEventListener('click', ()=> {
-      showScreen('edit');
-      setTimeout(()=> {
-        const sel = document.getElementById('edit_select');
-        sel.value = it.id;
-        sel.dispatchEvent(new Event('change'));
-      }, 150);
-    });
-    btnDel.addEventListener('click', ()=> {
-      // immediate delete (user requested no confirm)
-      const all = loadData().filter(d => d.id !== it.id);
-      saveData(all);
-      renderRanking();
-    });
-    tdOps.appendChild(btnEdit);
-    tdOps.appendChild(btnDel);
-    tr.appendChild(tdOps);
-
-    rankingBody.appendChild(tr);
+exportBtn.onclick=()=>{
+  let t="名前,顔,身体,演技,抜け度,安定感\n";
+  load().forEach(a=>{
+    t+=`${a.name},${a.face},${a.body},${a.acting},${a.nuke},${a.stable}\n`;
   });
+  csvText.value=t;
+};
 
-  // ensure header includes operation column label
-  // if not present, append TH for 操作
-  const existingOps = Array.from(rankingThead.querySelectorAll('th')).some(th => th.textContent === '操作');
-  if(!existingOps){
-    const thOp = document.createElement('th');
-    thOp.textContent = '操作';
-    rankingThead.appendChild(thOp);
-  }
-}
-sortSelect.addEventListener('change', ()=> renderRanking());
-
-/* Add screen logic */
-const add_name = document.getElementById('add_name');
-const add_face = document.getElementById('add_face');
-const add_body = document.getElementById('add_body');
-const add_acting = document.getElementById('add_acting');
-const add_nuke = document.getElementById('add_nuke');
-const add_rep = document.getElementById('add_rep');
-const addSubmit = document.getElementById('addSubmit');
-const addError = document.getElementById('addError');
-
-function validateAdd(){
-  const name = add_name.value.trim();
-  if(!name) return '名前を入力してください。';
-  const face = Number(add_face.value), body = Number(add_body.value), acting = Number(add_acting.value), nuke = Number(add_nuke.value);
-  if(!Number.isFinite(face) || !Number.isFinite(body) || !Number.isFinite(acting) || !Number.isFinite(nuke)) return '顔・身体・演技・抜け度は数値で入力してください。';
-  if(face <1 || face >10 || body <1 || body >10 || acting <1 || acting >10 || nuke <1 || nuke >10) return '顔・身体・演技・抜け度は 1〜10 の範囲で入力してください。';
-  if(!Number.isFinite(Number(add_rep.value))) return '代表作点数は整数で入力してください。';
-  return null;
-}
-
-addSubmit.addEventListener('click', ()=>{
-  addError.style.display = 'none';
-  const err = validateAdd();
-  if(err){ addError.textContent = err; addError.style.display = 'block'; return; }
-
-  const name = add_name.value.trim();
-  const face = clampInt(add_face.value,1,10);
-  const body = clampInt(add_body.value,1,10);
-  const acting = clampInt(add_acting.value,1,10);
-  const nuke = clampInt(add_nuke.value,1,10);
-  const rep = Math.floor(Number(add_rep.value) || 0);
-
-  const shikai = calcShikai(body, nuke, acting, face);
-  const shinri = calcShinri(acting, face, nuke, body);
-  const total = shikai + shinri + rep;
-
-  const data = loadData();
-  data.push({
-    id: uid(),
-    name, face, body, acting, nuke, rep, shikai, shinri, total,
-    createdAt: new Date().toISOString()
-  });
-  saveData(data);
-
-  // reset form -> empty (no initial defaults)
-  add_name.value = '';
-  add_face.value = '';
-  add_body.value = '';
-  add_acting.value = '';
-  add_nuke.value = '';
-  add_rep.value = '';
-
-  showScreen('ranking');
-  renderRanking();
-});
-
-/* Edit screen handling */
-const edit_select = document.getElementById('edit_select');
-const editArea = document.getElementById('editArea');
-const noActors = document.getElementById('noActors');
-const edit_name = document.getElementById('edit_name');
-const edit_face = document.getElementById('edit_face');
-const edit_body = document.getElementById('edit_body');
-const edit_acting = document.getElementById('edit_acting');
-const edit_nuke = document.getElementById('edit_nuke');
-const edit_rep = document.getElementById('edit_rep');
-const editSave = document.getElementById('editSave');
-const editDelete = document.getElementById('editDelete');
-const editError = document.getElementById('editError');
-
-function prepareEdit(){
-  const data = loadData();
-  if(data.length === 0){
-    edit_select.innerHTML = '';
-    editArea.style.display = 'none';
-    noActors.style.display = 'block';
-    return;
-  }
-  noActors.style.display = 'none';
-  editArea.style.display = 'block';
-  edit_select.innerHTML = '';
-  data.forEach(d=>{
-    const opt = document.createElement('option');
-    opt.value = d.id;
-    opt.textContent = d.name;
-    edit_select.appendChild(opt);
-  });
-  edit_select.value = data[0].id;
-  fillEditFields(data[0]);
-}
-
-function fillEditFields(item){
-  edit_name.value = item.name || '';
-  edit_face.value = item.face || '';
-  edit_body.value = item.body || '';
-  edit_acting.value = item.acting || '';
-  edit_nuke.value = item.nuke || '';
-  edit_rep.value = item.rep || '';
-  editError.style.display = 'none';
-}
-
-edit_select.addEventListener('change', ()=>{
-  const id = edit_select.value;
-  const data = loadData();
-  const it = data.find(d=> d.id === id);
-  if(it) fillEditFields(it);
-});
-
-function validateEdit(){
-  const name = edit_name.value.trim();
-  if(!name) return '名前を入力してください。';
-  const face = Number(edit_face.value), body = Number(edit_body.value), acting = Number(edit_acting.value), nuke = Number(edit_nuke.value);
-  if(!Number.isFinite(face) || !Number.isFinite(body) || !Number.isFinite(acting) || !Number.isFinite(nuke)) return '顔・身体・演技・抜け度は数値で入力してください。';
-  if(face <1 || face >10 || body <1 || body >10 || acting <1 || acting >10 || nuke <1 || nuke >10) return '顔・身体・演技・抜け度は 1〜10 の範囲で入力してください。';
-  if(!Number.isFinite(Number(edit_rep.value))) return '代表作点数は整数で入力してください。';
-  return null;
-}
-
-editSave.addEventListener('click', ()=>{
-  editError.style.display = 'none';
-  const err = validateEdit();
-  if(err){ editError.textContent = err; editError.style.display = 'block'; return; }
-
-  const id = edit_select.value;
-  const data = loadData();
-  const idx = data.findIndex(d=> d.id === id);
-  if(idx === -1) { editError.textContent = '選択されたデータが見つかりません。'; editError.style.display = 'block'; return; }
-
-  const name = edit_name.value.trim();
-  const face = clampInt(edit_face.value,1,10);
-  const body = clampInt(edit_body.value,1,10);
-  const acting = clampInt(edit_acting.value,1,10);
-  const nuke = clampInt(edit_nuke.value,1,10);
-  const rep = Math.floor(Number(edit_rep.value) || 0);
-
-  const shikai = calcShikai(body, nuke, acting, face);
-  const shinri = calcShinri(acting, face, nuke, body);
-  const total = shikai + shinri + rep;
-
-  const record = {
-    ...data[idx],
-    name, face, body, acting, nuke, rep, shikai, shinri, total,
-    updatedAt: new Date().toISOString()
-  };
-  data[idx] = record;
-  saveData(data);
-  prepareEdit();
-  showScreen('ranking');
-  renderRanking();
-});
-
-editDelete.addEventListener('click', ()=>{
-  const id = edit_select.value;
-  const data = loadData();
-  const idx = data.findIndex(d=> d.id === id);
-  if(idx === -1) return;
-  data.splice(idx,1);
-  saveData(data);
-  prepareEdit();
-  renderRanking();
-});
-
-/* Information I/O (text-based) */
-const io_text = document.getElementById('io_text');
-const io_import = document.getElementById('io_import');
-const io_export = document.getElementById('io_export');
-const io_copy = document.getElementById('io_copy');
-const io_result = document.getElementById('io_result');
-
-io_import.addEventListener('click', ()=>{
-  io_result.style.display = 'none';
-  const txt = (io_text.value || '').trim();
-  if(!txt){
-    io_result.style.display = 'block';
-    io_result.textContent = '入力テキストが空です。';
-    return;
-  }
-  const parseRes = parseBulkText(txt);
-  const {items, errors} = parseRes;
-  if(items.length === 0){
-    io_result.style.display = 'block';
-    io_result.textContent = '解析できる行がありません。形式を確認してください。';
-    return;
-  }
-  // add to existing (B: keep existing)
-  const data = loadData();
-  const before = data.length;
-  items.forEach(it=>{
-    // normalize and compute
-    const rec = normalizeRecord({
-      id: uid(),
-      name: it.name,
-      face: it.face,
-      body: it.body,
-      acting: it.acting,
-      nuke: it.nuke,
-      rep: it.rep,
-      createdAt: new Date().toISOString()
-    });
-    data.push(rec);
-  });
-  saveData(data);
-  // clear textarea
-  io_text.value = '';
-  // show summary
-  io_result.style.display = 'block';
-  io_result.textContent = `追加: ${items.length} 件。スキップ/エラー: ${errors.length} 件。`;
-  if(errors.length > 0){
-    io_result.textContent += '（例：' + errors.slice(0,3).join(' / ') + (errors.length>3? ' ...':'') + '）';
-  }
-  // refresh UI
-  showScreen('ranking');
-  renderRanking();
-});
-
-io_export.addEventListener('click', ()=>{
-  const data = loadData();
-  if(data.length === 0){
-    io_result.style.display = 'block';
-    io_result.textContent = '出力するデータがありません。';
-    io_text.value = '';
-    return;
-  }
-  // build CSV-like text: header + rows
-  const header = ['名前','顔','身体','演技','抜け度','代表作点数'];
-  const lines = [header.join(',')];
-  data.forEach(d=>{
-    lines.push([d.name,d.face,d.body,d.acting,d.nuke,d.rep].join(','));
-  });
-  const out = lines.join('\r\n');
-  io_text.value = out;
-  io_result.style.display = 'block';
-  io_result.textContent = `出力 ${data.length} 件。右上の COPY でクリップボードへコピーできます。`;
-});
-
-io_copy.addEventListener('click', async ()=>{
-  try{
-    await navigator.clipboard.writeText(io_text.value || '');
-    io_result.style.display = 'block';
-    io_result.textContent = 'クリップボードへコピーしました。';
-  }catch(e){
-    io_result.style.display = 'block';
-    io_result.textContent = 'コピーに失敗しました。テキストを手動で選択してコピーしてください。';
-  }
-});
-
-/* Bulk text parser
-   Supports:
-   - CSV lines (comma separated) with optional header
-   - Or "name" line then "numbers" line pairs, numbers can be space- or comma-separated
-*/
-function parseBulkText(txt){
-  const rawLines = txt.replace(/\r/g,'').split('\n').map(l=> l.trim()).filter(l=> l.length>0);
-  if(rawLines.length === 0) return {items:[], errors:[]};
-  const items = [];
-  const errors = [];
-
-  // detect if most lines contain comma -> treat as CSV (each line is a record)
-  const commaCount = rawLines.reduce((acc,l)=> acc + (l.includes(',')?1:0), 0);
-  if(commaCount >= Math.ceil(rawLines.length / 2)){
-    // CSV style
-    let start = 0;
-    const firstCols = rawLines[0].split(',').map(s=>s.trim());
-    if(firstCols.length > 1 && isNaN(Number(firstCols[1]))) start = 1; // header
-    for(let i=start;i<rawLines.length;i++){
-      const cols = rawLines[i].split(',').map(s=> s.trim());
-      if(cols.length < 6){
-        errors.push(`行${i+1} 列不足`);
-        continue;
-      }
-      const name = cols[0];
-      const face = Number(cols[1]);
-      const body = Number(cols[2]);
-      const acting = Number(cols[3]);
-      const nuke = Number(cols[4]);
-      const rep = Number(cols[5]);
-      if(!name){ errors.push(`行${i+1} 名前空`); continue; }
-      if([face,body,acting,nuke].some(v=> !Number.isFinite(Number(v)))){
-        errors.push(`行${i+1} 数値不正`); continue;
-      }
-      items.push({name, face:Math.floor(face), body:Math.floor(body), acting:Math.floor(acting), nuke:Math.floor(nuke), rep:Math.floor(rep||0)});
-    }
-    return {items, errors};
-  }
-
-  // Otherwise, attempt name-line / numbers-line pairs
-  for(let i=0;i<rawLines.length;){
-    const line = rawLines[i];
-    // if line appears to be numbers only, skip as stray
-    if(/^[\d\s,]+$/.test(line)){
-      errors.push(`行${i+1} 数値行が先頭に来ています`);
-      i++; continue;
-    }
-    const name = line;
-    // next non-empty line should be numbers
-    if(i+1 >= rawLines.length){
-      errors.push(`行${i+1} (${name}) の後に数値行がありません`);
-      break;
-    }
-    const numsLine = rawLines[i+1];
-    const parts = numsLine.includes(',') ? numsLine.split(',').map(s=>s.trim()) : numsLine.split(/\s+/).map(s=>s.trim());
-    if(parts.length < 5){
-      errors.push(`行${i+2} (${numsLine}) 数値が5つ未満`);
-      i += 2; continue;
-    }
-    const face = Number(parts[0]), body = Number(parts[1]), acting = Number(parts[2]), nuke = Number(parts[3]), rep = Number(parts[4]);
-    if([face,body,acting,nuke].some(v=> !Number.isFinite(Number(v)))){
-      errors.push(`行${i+2} (${numsLine}) 数値不正`);
-      i += 2; continue;
-    }
-    items.push({name, face:Math.floor(face), body:Math.floor(body), acting:Math.floor(acting), nuke:Math.floor(nuke), rep:Math.floor(rep||0)});
-    i += 2;
-  }
-  return {items, errors};
-}
-
-/* Init */
-(function init(){
-  hideAll();
-  // default display: show ranking in total mode
-  document.getElementById('sortSelect').value = 'total_desc';
-  renderRanking();
-})();
+sortSelect.onchange=render;
+render();
 </script>
 </body>
 </html>
