@@ -1,204 +1,189 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>AV Actress Rating</title>
+<meta charset="utf-8">
+<title>av_quant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body {
-  font-family: sans-serif;
-  margin: 20px;
-}
-input, textarea, select, button {
-  margin: 4px;
-}
-.card {
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-.card h3 {
-  margin: 0 0 6px 0;
-}
-.memo {
-  margin-top: 6px;
-  font-size: 0.9em;
-  color: #333;
-}
-.controls {
-  margin-bottom: 10px;
-}
+body{margin:0;font-family:sans-serif;background:#f5f5f7}
+.wrap{max-width:1100px;margin:auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center}
+button{padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:16px}
+.card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 2px 5px rgba(0,0,0,.08)}
+.card h3{margin:0 0 8px 0}
+.score{font-size:13px}
+.memo{margin-top:8px;font-size:12px;color:#555}
+.actions{margin-top:8px;display:flex;gap:6px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center}
+.modal-content{background:#fff;border-radius:10px;padding:16px;max-width:700px;width:100%}
+input,textarea{width:100%;margin-bottom:6px;padding:6px}
+.hidden{display:none}
 </style>
 </head>
 <body>
 
-<h2>AV Actress Rating</h2>
-
-<div class="controls">
-  並び替え：
-  <select id="sortKey">
-    <option value="total">総合値</option>
-    <option value="vision">視界制圧力</option>
-    <option value="mental">心理的引力</option>
-    <option value="erotic">煽情恒常力</option>
-  </select>
-  <button onclick="render()">反映</button>
-</div>
-
+<div class="wrap">
+<header>
+<h1>av_quant</h1>
 <div>
-  <h3>女優追加／編集</h3>
-  名前 <input id="name">
-  視界制圧力 <input id="vision" type="number" min="0" max="100">
-  心理的引力 <input id="mental" type="number" min="0" max="100">
-  煽情恒常力 <input id="erotic" type="number" min="0" max="100"><br>
-  メモ<br>
-  <textarea id="memo" rows="2" cols="40"></textarea><br>
-  <button onclick="save()">保存</button>
+<button onclick="openEditor()">追加</button>
+<button onclick="openCSV()">CSV</button>
+</div>
+</header>
+
+<select id="sort" onchange="render()">
+<option value="shikai">視界制圧力</option>
+<option value="shinri">心理的引力</option>
+<option value="jousei">煽情恒常力</option>
+</select>
+
+<div id="cards" class="card-grid"></div>
 </div>
 
-<h3>CSV入力</h3>
-<textarea id="csvInput" rows="5" cols="80"></textarea><br>
-<button onclick="importCSV()">読み込み</button>
-<button onclick="exportCSV()">CSV出力</button>
+<!-- 編集 -->
+<div id="editor" class="modal">
+<div class="modal-content">
+<h2 id="editTitle"></h2>
+<input id="name" placeholder="名前">
+<input type="number" id="face" placeholder="顔">
+<input type="number" id="body" placeholder="身体">
+<input type="number" id="acting" placeholder="演技">
+<input type="number" id="nuke" placeholder="抜け度">
+<input type="number" id="stable" placeholder="安定感">
+<textarea id="memo" placeholder="評価メモ"></textarea>
+<button onclick="save()">保存</button>
+<button onclick="closeEditor()">閉じる</button>
+</div>
+</div>
 
-<hr>
+<!-- レーダー -->
+<div id="radarModal" class="modal">
+<div class="modal-content">
+<canvas id="radar"></canvas>
+<div id="powers"></div>
+<button onclick="closeRadar()">閉じる</button>
+</div>
+</div>
 
-<div id="list"></div>
+<!-- CSV -->
+<div id="csvModal" class="modal">
+<div class="modal-content">
+<textarea id="csv"></textarea>
+<button onclick="importCSV()">取込</button>
+<button onclick="exportCSV()">出力</button>
+<button onclick="closeCSV()">閉じる</button>
+</div>
+</div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("actressData") || "[]");
+const KEY="av_quant_v5";
+let data=JSON.parse(localStorage.getItem(KEY)||"[]");
+let editing=null;
 
-function save() {
-  const name = document.getElementById("name").value;
-  const obj = {
-    name,
-    vision: Number(document.getElementById("vision").value),
-    mental: Number(document.getElementById("mental").value),
-    erotic: Number(document.getElementById("erotic").value),
-    memo: document.getElementById("memo").value
-  };
-  const idx = data.findIndex(d => d.name === name);
-  if (idx >= 0) data[idx] = obj;
-  else data.push(obj);
-  persist();
-  clearForm();
-  render();
+const W=[1.5,1.3,1.1,0.7,0.3];
+
+function calc(o,order){
+return Math.round(
+order.map((k,i)=>o[k]*W[i]).reduce((a,b)=>a+b,0)
+);
 }
 
-function clearForm() {
-  ["name","vision","mental","erotic","memo"].forEach(id => {
-    document.getElementById(id).value = "";
-  });
+function powers(o){
+return{
+shikai:calc(o,["body","nuke","acting","face","stable"]),
+shinri:calc(o,["acting","nuke","face","body","stable"]),
+jousei:calc(o,["stable","nuke","acting","face","body"])
+};
 }
 
-function persist() {
-  localStorage.setItem("actressData", JSON.stringify(data));
+function render(){
+const s=document.getElementById("sort").value;
+cards.innerHTML="";
+data.sort((a,b)=>powers(b)[s]-powers(a)[s]);
+data.forEach(d=>{
+const p=powers(d);
+cards.innerHTML+=`
+<div class="card">
+<h3>${d.name}</h3>
+<div class="score">視界制圧力 ${p.shikai}</div>
+<div class="score">心理的引力 ${p.shinri}</div>
+<div class="score">煽情恒常力 ${p.jousei}</div>
+<div class="memo">${d.memo||""}</div>
+<div class="actions">
+<button onclick="showRadar('${d.id}')">📊</button>
+<button onclick="edit('${d.id}')">✎</button>
+<button onclick="del('${d.id}')">✕</button>
+</div>
+</div>`;
+});
 }
 
-function total(d) {
-  return d.vision + d.mental + d.erotic;
+function save(){
+const o={
+id:editing||Date.now().toString(),
+name:name.value,
+face:+face.value,
+body:+body.value,
+acting:+acting.value,
+nuke:+nuke.value,
+stable:+stable.value,
+memo:memo.value
+};
+if(editing){
+data=data.map(d=>d.id===o.id?o:d);
+}else data.push(o);
+localStorage.setItem(KEY,JSON.stringify(data));
+closeEditor();render();
 }
 
-function render() {
-  const key = document.getElementById("sortKey").value;
-  let sorted = [...data];
-  sorted.sort((a,b) => {
-    if (key === "vision") return b.vision - a.vision;
-    if (key === "mental") return b.mental - a.mental;
-    if (key === "erotic") return b.erotic - a.erotic;
-    return total(b) - total(a);
-  });
-
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-
-  sorted.forEach(d => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `
-      <h3>${d.name}</h3>
-      視界制圧力: ${d.vision}<br>
-      心理的引力: ${d.mental}<br>
-      煽情恒常力: ${d.erotic}<br>
-      <div class="memo">${d.memo || ""}</div>
-      <button onclick="edit('${d.name}')">編集</button>
-      <button onclick="showChart('${d.name}')">レーダー</button>
-    `;
-    list.appendChild(div);
-  });
+function edit(id){
+const d=data.find(x=>x.id===id);
+editing=id;
+editTitle.textContent="編集";
+Object.assign(window,d);
+openEditor();
 }
 
-function edit(name) {
-  const d = data.find(x => x.name === name);
-  if (!d) return;
-  document.getElementById("name").value = d.name;
-  document.getElementById("vision").value = d.vision;
-  document.getElementById("mental").value = d.mental;
-  document.getElementById("erotic").value = d.erotic;
-  document.getElementById("memo").value = d.memo;
+function del(id){
+data=data.filter(d=>d.id!==id);
+localStorage.setItem(KEY,JSON.stringify(data));
+render();
 }
 
-function showChart(name) {
-  const d = data.find(x => x.name === name);
-  if (!d) return;
-  const w = window.open("", "_blank");
-  w.document.write(`
-    <canvas id="c" width="400" height="400"></canvas>
-    <div>
-      視界制圧力: ${d.vision}<br>
-      心理的引力: ${d.mental}<br>
-      煽情恒常力: ${d.erotic}
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
-    <script>
-      new Chart(document.getElementById("c"), {
-        type: "radar",
-        data: {
-          labels: ["視界制圧力","心理的引力","煽情恒常力"],
-          datasets: [{
-            data: [${d.vision},${d.mental},${d.erotic}],
-            fill: true
-          }]
-        },
-        options: {
-          scales: {
-            r: {
-              min: 0,
-              max: 100
-            }
-          }
-        }
-      });
-    <\/script>
-  `);
+function openEditor(){editor.style.display="flex"}
+function closeEditor(){editor.style.display="none";editing=null}
+
+function showRadar(id){
+const d=data.find(x=>x.id===id);
+const ctx=radar.getContext("2d");
+new Chart(ctx,{type:"radar",data:{labels:["顔","身体","演技","抜け度","安定感"],datasets:[{data:[d.face,d.body,d.acting,d.nuke,d.stable]}]},options:{scales:{r:{min:0,max:100}}}});
+const p=powers(d);
+powers.innerHTML=`視界制圧力 ${p.shikai}<br>心理的引力 ${p.shinri}<br>煽情恒常力 ${p.jousei}`;
+radarModal.style.display="flex";
 }
 
-function importCSV() {
-  const lines = document.getElementById("csvInput").value.trim().split("\n");
-  data = lines.slice(1).map(l => {
-    const [name,vision,mental,erotic,memo] = l.split(",");
-    return {
-      name,
-      vision:Number(vision),
-      mental:Number(mental),
-      erotic:Number(erotic),
-      memo:memo || ""
-    };
-  });
-  persist();
-  render();
-}
+function closeRadar(){radarModal.style.display="none"}
 
-function exportCSV() {
-  let csv = "名前,視界制圧力,心理的引力,煽情恒常力,メモ\n";
-  data.forEach(d => {
-    csv += `${d.name},${d.vision},${d.mental},${d.erotic},${d.memo}\n`;
-  });
-  alert(csv);
+function openCSV(){csvModal.style.display="flex"}
+function closeCSV(){csvModal.style.display="none"}
+
+function exportCSV(){
+csv.value="名前,顔,身体,演技,抜け度,安定感,メモ\n"+
+data.map(d=>[d.name,d.face,d.body,d.acting,d.nuke,d.stable,(d.memo||"")].join(",")).join("\n");
+}
+function importCSV(){
+const l=csv.value.trim().split("\n").slice(1);
+l.forEach(r=>{
+const[c,f,b,a,n,s,m]=r.split(",");
+data.push({id:Date.now()+Math.random()+"",name:c,face:+f,body:+b,acting:+a,nuke:+n,stable:+s,memo:m});
+});
+localStorage.setItem(KEY,JSON.stringify(data));
+closeCSV();render();
 }
 
 render();
 </script>
-
 </body>
 </html>
