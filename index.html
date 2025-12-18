@@ -1,279 +1,204 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>av_quant v5.1</title>
-
+<meta charset="UTF-8">
+<title>AV Actress Rating</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Arial,sans-serif;
-  background:#f7f7f9;
+body {
+  font-family: sans-serif;
+  margin: 20px;
 }
-.wrap{max-width:960px;margin:16px auto;padding:16px}
-.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
-.btn{background:#0b66ff;color:#fff}
-.btn.ghost{background:#fff;color:#0b66ff;border:1px solid #0b66ff}
-.btn.danger{background:#e5533d;color:#fff}
-.screen{display:none}
-.screen.active{display:block}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #ccc;font-size:14px}
-textarea{width:100%;min-height:160px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #eee;text-align:center}
-th{background:#fafafa}
-
-.chartWrap{
-  display:flex;
-  gap:24px;
-  align-items:center;
+input, textarea, select, button {
+  margin: 4px;
 }
-.chartBox{
-  width:360px;
-  height:360px;
+.card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
 }
-.metricBox{
-  font-size:16px;
-  line-height:2;
+.card h3 {
+  margin: 0 0 6px 0;
 }
-.metricBox div{
-  font-weight:600;
+.memo {
+  margin-top: 6px;
+  font-size: 0.9em;
+  color: #333;
+}
+.controls {
+  margin-bottom: 10px;
 }
 </style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
-<div class="wrap">
 
-<div class="card">
-<button class="btn" data-screen="ranking">ランキング</button>
-<button class="btn" data-screen="add">追加</button>
-<button class="btn" data-screen="edit">編集</button>
-<button class="btn" data-screen="io">CSV</button>
+<h2>AV Actress Rating</h2>
+
+<div class="controls">
+  並び替え：
+  <select id="sortKey">
+    <option value="total">総合値</option>
+    <option value="vision">視界制圧力</option>
+    <option value="mental">心理的引力</option>
+    <option value="erotic">煽情恒常力</option>
+  </select>
+  <button onclick="render()">反映</button>
 </div>
 
-<section id="ranking" class="card screen active">
-<h2>ランキング</h2>
-<select id="sortSelect">
-<option value="view">視界制圧力</option>
-<option value="mind">心理的引力</option>
-<option value="lust">煽情恒常力</option>
-</select>
-<table>
-<thead>
-<tr>
-<th>順位</th><th>名前</th>
-<th>視界</th><th>心理</th><th>煽情</th>
-<th>操作</th>
-</tr>
-</thead>
-<tbody id="rankingBody"></tbody>
-</table>
-</section>
-
-<section id="add" class="card screen">
-<h2>追加</h2>
-<input id="add_name" placeholder="名前"><br><br>
-顔<input id="add_face" type="number"><br>
-身体<input id="add_body" type="number"><br>
-演技<input id="add_acting" type="number"><br>
-抜け度<input id="add_nuke" type="number"><br>
-安定感<input id="add_stable" type="number"><br><br>
-<button class="btn" id="addBtn">追加</button>
-</section>
-
-<section id="edit" class="card screen">
-<h2>編集</h2>
-<select id="edit_select"></select><br><br>
-<input id="edit_name"><br>
-顔<input id="edit_face" type="number"><br>
-身体<input id="edit_body" type="number"><br>
-演技<input id="edit_acting" type="number"><br>
-抜け度<input id="edit_nuke" type="number"><br>
-安定感<input id="edit_stable" type="number"><br><br>
-<button class="btn" id="saveBtn">更新</button>
-<button class="btn danger" id="delBtn">削除</button>
-</section>
-
-<section id="io" class="card screen">
-<h2>CSV入出力</h2>
-<textarea id="csvText"></textarea><br><br>
-<button class="btn" id="importBtn">追記読み込み</button>
-<button class="btn ghost" id="exportBtn">書き出し</button>
-</section>
-
-<section id="chart" class="card screen">
-<h2 id="chartTitle"></h2>
-<div class="chartWrap">
-  <div class="chartBox">
-    <canvas id="radar"></canvas>
-  </div>
-  <div class="metricBox">
-    <div>視界制圧力：<span id="cv"></span></div>
-    <div>心理的引力：<span id="cm"></span></div>
-    <div>煽情恒常力：<span id="cl"></span></div>
-  </div>
+<div>
+  <h3>女優追加／編集</h3>
+  名前 <input id="name">
+  視界制圧力 <input id="vision" type="number" min="0" max="100">
+  心理的引力 <input id="mental" type="number" min="0" max="100">
+  煽情恒常力 <input id="erotic" type="number" min="0" max="100"><br>
+  メモ<br>
+  <textarea id="memo" rows="2" cols="40"></textarea><br>
+  <button onclick="save()">保存</button>
 </div>
-<br>
-<button class="btn ghost" data-screen="ranking">戻る</button>
-</section>
 
-</div>
+<h3>CSV入力</h3>
+<textarea id="csvInput" rows="5" cols="80"></textarea><br>
+<button onclick="importCSV()">読み込み</button>
+<button onclick="exportCSV()">CSV出力</button>
+
+<hr>
+
+<div id="list"></div>
 
 <script>
-const KEY="av_quant_v51";
-const screens=document.querySelectorAll(".screen");
+let data = JSON.parse(localStorage.getItem("actressData") || "[]");
 
-function show(id){
-  screens.forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+function save() {
+  const name = document.getElementById("name").value;
+  const obj = {
+    name,
+    vision: Number(document.getElementById("vision").value),
+    mental: Number(document.getElementById("mental").value),
+    erotic: Number(document.getElementById("erotic").value),
+    memo: document.getElementById("memo").value
+  };
+  const idx = data.findIndex(d => d.name === name);
+  if (idx >= 0) data[idx] = obj;
+  else data.push(obj);
+  persist();
+  clearForm();
+  render();
 }
-document.querySelectorAll("[data-screen]").forEach(b=>{
-  b.onclick=()=>show(b.dataset.screen);
-});
 
-function load(){return JSON.parse(localStorage.getItem(KEY)||"[]")}
-function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
-
-function calc(a){
-  a.view=Math.floor(a.body*1.5+a.nuke*1.25+a.acting*1+a.face*0.75+a.stable*0.5);
-  a.mind=Math.floor(a.acting*1.5+a.nuke*1.25+a.face*1+a.body*0.75+a.stable*0.5);
-  a.lust=Math.floor(a.stable*1.5+a.face*1.25+a.acting*1+a.body*0.75+a.nuke*0.5);
-}
-
-function render(){
-  const body=document.getElementById("rankingBody");
-  body.innerHTML="";
-  const data=load();
-  const mode=sortSelect.value;
-  data.forEach(calc);
-  data.sort((a,b)=>b[mode]-a[mode]);
-  data.forEach((a,i)=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${i+1}</td><td>${a.name}</td>
-      <td>${a.view}</td><td>${a.mind}</td><td>${a.lust}</td>
-      <td><button onclick="openChart('${a.id}')">📊</button></td>`;
-    body.appendChild(tr);
+function clearForm() {
+  ["name","vision","mental","erotic","memo"].forEach(id => {
+    document.getElementById(id).value = "";
   });
-  renderEdit();
 }
 
-function openChart(id){
-  const a=load().find(x=>x.id===id);
-  if(!a)return;
-  calc(a);
-  show("chart");
-  chartTitle.textContent=a.name;
-  cv.textContent=a.view;
-  cm.textContent=a.mind;
-  cl.textContent=a.lust;
+function persist() {
+  localStorage.setItem("actressData", JSON.stringify(data));
+}
 
-  if(window.radarChart) radarChart.destroy();
-  radarChart=new Chart(radar,{
-    type:"radar",
-    data:{
-      labels:["顔","身体","演技","抜け度","安定感"],
-      datasets:[{
-        data:[a.face,a.body,a.acting,a.nuke,a.stable],
-        fill:true
-      }]
-    },
-    options:{
-      scales:{
-        r:{
-          min:0,
-          max:100,
-          ticks:{stepSize:20}
+function total(d) {
+  return d.vision + d.mental + d.erotic;
+}
+
+function render() {
+  const key = document.getElementById("sortKey").value;
+  let sorted = [...data];
+  sorted.sort((a,b) => {
+    if (key === "vision") return b.vision - a.vision;
+    if (key === "mental") return b.mental - a.mental;
+    if (key === "erotic") return b.erotic - a.erotic;
+    return total(b) - total(a);
+  });
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  sorted.forEach(d => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <h3>${d.name}</h3>
+      視界制圧力: ${d.vision}<br>
+      心理的引力: ${d.mental}<br>
+      煽情恒常力: ${d.erotic}<br>
+      <div class="memo">${d.memo || ""}</div>
+      <button onclick="edit('${d.name}')">編集</button>
+      <button onclick="showChart('${d.name}')">レーダー</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function edit(name) {
+  const d = data.find(x => x.name === name);
+  if (!d) return;
+  document.getElementById("name").value = d.name;
+  document.getElementById("vision").value = d.vision;
+  document.getElementById("mental").value = d.mental;
+  document.getElementById("erotic").value = d.erotic;
+  document.getElementById("memo").value = d.memo;
+}
+
+function showChart(name) {
+  const d = data.find(x => x.name === name);
+  if (!d) return;
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <canvas id="c" width="400" height="400"></canvas>
+    <div>
+      視界制圧力: ${d.vision}<br>
+      心理的引力: ${d.mental}<br>
+      煽情恒常力: ${d.erotic}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+    <script>
+      new Chart(document.getElementById("c"), {
+        type: "radar",
+        data: {
+          labels: ["視界制圧力","心理的引力","煽情恒常力"],
+          datasets: [{
+            data: [${d.vision},${d.mental},${d.erotic}],
+            fill: true
+          }]
+        },
+        options: {
+          scales: {
+            r: {
+              min: 0,
+              max: 100
+            }
+          }
         }
-      }
-    }
-  });
+      });
+    <\/script>
+  `);
 }
 
-addBtn.onclick=()=>{
-  const d=load();
-  d.push({
-    id:Date.now().toString(),
-    name:add_name.value,
-    face:+add_face.value||0,
-    body:+add_body.value||0,
-    acting:+add_acting.value||0,
-    nuke:+add_nuke.value||0,
-    stable:+add_stable.value||0
+function importCSV() {
+  const lines = document.getElementById("csvInput").value.trim().split("\n");
+  data = lines.slice(1).map(l => {
+    const [name,vision,mental,erotic,memo] = l.split(",");
+    return {
+      name,
+      vision:Number(vision),
+      mental:Number(mental),
+      erotic:Number(erotic),
+      memo:memo || ""
+    };
   });
-  save(d);render();show("ranking");
-};
-
-function renderEdit(){
-  edit_select.innerHTML="";
-  load().forEach(a=>{
-    const o=document.createElement("option");
-    o.value=a.id;o.textContent=a.name;
-    edit_select.appendChild(o);
-  });
+  persist();
+  render();
 }
 
-edit_select.onchange=()=>{
-  const a=load().find(x=>x.id===edit_select.value);
-  if(!a)return;
-  edit_name.value=a.name;
-  edit_face.value=a.face;
-  edit_body.value=a.body;
-  edit_acting.value=a.acting;
-  edit_nuke.value=a.nuke;
-  edit_stable.value=a.stable;
-};
-
-saveBtn.onclick=()=>{
-  const d=load();
-  const i=d.findIndex(x=>x.id===edit_select.value);
-  if(i<0)return;
-  Object.assign(d[i],{
-    name:edit_name.value,
-    face:+edit_face.value,
-    body:+edit_body.value,
-    acting:+edit_acting.value,
-    nuke:+edit_nuke.value,
-    stable:+edit_stable.value
+function exportCSV() {
+  let csv = "名前,視界制圧力,心理的引力,煽情恒常力,メモ\n";
+  data.forEach(d => {
+    csv += `${d.name},${d.vision},${d.mental},${d.erotic},${d.memo}\n`;
   });
-  save(d);render();show("ranking");
-};
+  alert(csv);
+}
 
-delBtn.onclick=()=>{
-  save(load().filter(x=>x.id!==edit_select.value));
-  render();show("ranking");
-};
-
-importBtn.onclick=()=>{
-  const lines=csvText.value.trim().split("\n");
-  const d=load();
-  for(let i=1;i<lines.length;i++){
-    const c=lines[i].split(",");
-    if(c.length<6)continue;
-    d.push({
-      id:Date.now()+""+i,
-      name:c[0],
-      face:+c[1],body:+c[2],acting:+c[3],nuke:+c[4],stable:+c[5]
-    });
-  }
-  save(d);render();show("ranking");
-};
-
-exportBtn.onclick=()=>{
-  let t="名前,顔,身体,演技,抜け度,安定感\n";
-  load().forEach(a=>{
-    t+=`${a.name},${a.face},${a.body},${a.acting},${a.nuke},${a.stable}\n`;
-  });
-  csvText.value=t;
-};
-
-sortSelect.onchange=render;
 render();
 </script>
+
 </body>
 </html>
